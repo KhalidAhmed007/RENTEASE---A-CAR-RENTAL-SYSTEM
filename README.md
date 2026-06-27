@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RentEase - Car Rental Management System
 
-## Getting Started
+A modern full-stack car rental platform built with **Next.js, React, Node.js, Express.js, MongoDB, Tailwind CSS, and TypeScript**. RentEase enables users to browse vehicles, book rentals, manage reservations, and securely authenticate using JWT. The platform also provides an admin dashboard for managing cars, bookings, users, payments, and analytics.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+* User Registration & Login (JWT Authentication)
+* Browse and Search Cars
+* Filter & Sort Vehicles
+* Car Details Page
+* Online Booking System
+* Razorpay Payment Integration
+* Booking History
+* User Dashboard
+* Admin Dashboard
+* Vehicle Management
+* Booking Management
+* Review & Rating System
+* Responsive UI
+* RESTful API Architecture
+
+## Tech Stack
+
+### Frontend
+
+* Next.js
+* React
+* TypeScript
+* Tailwind CSS
+* Axios
+
+### Backend
+
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+* JWT Authentication
+* Cloudinary
+* Razorpay
+* Redis
+
+## Project Structure
+
+```
+car_rental_system/
+├── frontend/
+├── backend/
+└── README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Clone the repository
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+git clone https://github.com/KhalidAhmed007/RENTEASE---A-CAR-RENTAL-SYSTEM.git
+```
 
-## Learn More
+Install dependencies
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Install frontend dependencies
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+cd frontend
+npm install
+```
 
-## Deploy on Vercel
+Install backend dependencies
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+cd ../backend
+npm install
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configure environment variables
+
+Create `.env` files for both frontend and backend using your own credentials.
+
+Run the project
+
+Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Backend
+
+```bash
+cd backend
+npm run dev
+```
+
+## Future Improvements
+
+* Email Notifications
+* AI-Based Car Recommendations
+* GPS Tracking
+* Coupon & Discount System
+* Multi-language Support
+
+## License
+
+This project is licensed under the MIT License.
