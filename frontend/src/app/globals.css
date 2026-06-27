@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* ─── Tailwind v4: enable class-based dark mode ─────────────────────────────
+   @custom-variant is the correct Tailwind v4 API (replaces the old @variant).
+   dark: utilities activate when <html class="dark"> is set. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Premium Light Mode Design Tokens ──────────────────────────────────────
+   Matches the Airbnb/Turo SaaS design system used throughout the app.
+   These drive the base page & component backgrounds in light mode only.     */
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --color-page-bg:       #F8FAFC;   /* slate-50  — page background */
+  --color-section-bg:    #F1F5F9;   /* slate-100 — secondary sections */
+  --color-card-bg:       #FFFFFF;   /* white     — cards */
+  --color-border:        #E2E8F0;   /* slate-200 — borders */
+  --color-border-muted:  #EEF2F8;   /* lighter border */
+  --color-text-primary:  #0F172A;   /* slate-900 */
+  --color-text-muted:    #64748B;   /* slate-500 */
+  --color-brand:         #2563EB;   /* blue-600  */
+  --color-brand-hover:   #1D4ED8;   /* blue-700  */
+  --color-success:       #10B981;   /* emerald-500 */
+  --color-warning:       #F59E0B;   /* amber-500 */
+  --color-danger:        #EF4444;   /* red-500 */
+}
+
+/* Dark mode base */
+html.dark {
+  color-scheme: dark;
+}
+
+/* ─── Base body — premium off-white in light mode ───────────────────────── */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--color-page-bg);
+  color: var(--color-text-primary);
+}
+
+html.dark body {
+  background-color: #020617; /* slate-950 */
+  color: #f1f5f9;            /* slate-100 */
+}
+
+
+/* Smooth theme transitions */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+
+/* Override transition for elements that shouldn't animate color */
+.no-transition, a, button {
+  transition-property: background-color, border-color, color, opacity, transform, box-shadow;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Remove search input native clear */
+input[type='search']::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Focus visible ring — global */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Horizontal scroll hide for carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
