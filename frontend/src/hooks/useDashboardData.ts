@@ -62,9 +62,8 @@ export function useDashboardData(): DashboardData {
           setRecommendedCars(carsData.value.cars || []);
           setAvailableCarsCount(carsData.value.pagination?.total || 0);
         }
-      } catch (err) {
+      } catch {
         setError('Failed to load dashboard data. Please try again.');
-        console.error('Dashboard data fetch error:', err);
       } finally {
         setIsLoading(false);
       }

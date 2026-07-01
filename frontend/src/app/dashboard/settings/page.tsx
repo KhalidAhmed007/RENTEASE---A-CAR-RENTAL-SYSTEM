@@ -34,9 +34,9 @@ type PasswordForm  = z.infer<typeof passwordSchema>;
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-slate-700">{label}</label>
+      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
       {children}
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
     </div>
   );
 }
@@ -45,8 +45,11 @@ function TextInput({ error, ...props }: React.InputHTMLAttributes<HTMLInputEleme
   return (
     <input
       {...props}
-      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-colors
-        ${error ? 'border-red-300 bg-red-50 focus:border-red-500' : 'border-slate-200 bg-white focus:border-blue-500'}
+      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-colors text-slate-900 dark:text-white
+        ${error
+          ? 'border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-700 focus:border-red-500'
+          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:border-blue-500 dark:focus:border-blue-400'
+        }
       `}
     />
   );
@@ -90,22 +93,22 @@ function ProfileSection() {
   };
 
   return (
-    <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
         <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
           <User className="h-4.5 w-4.5 text-blue-600" />
         </div>
         <div>
-          <h2 className="font-semibold text-slate-900">Personal Information</h2>
-          <p className="text-xs text-slate-500">Update your display name and phone number</p>
+          <h2 className="font-semibold text-slate-900 dark:text-white">Personal Information</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Update your display name and phone number</p>
         </div>
       </div>
 
       {profile && (
-        <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-600">
-          <div><span className="font-medium text-slate-700">Email:</span> {profile.email}</div>
-          <div><span className="font-medium text-slate-700">License:</span> {profile.licenseNumber}</div>
-          <div><span className="font-medium text-slate-700">Role:</span> <span className="capitalize">{profile.role}</span></div>
+        <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300">
+          <div><span className="font-medium text-slate-700 dark:text-slate-200">Email:</span> {profile.email}</div>
+          <div><span className="font-medium text-slate-700 dark:text-slate-200">License:</span> {profile.licenseNumber}</div>
+          <div><span className="font-medium text-slate-700 dark:text-slate-200">Role:</span> <span className="capitalize">{profile.role}</span></div>
         </div>
       )}
 
@@ -178,14 +181,14 @@ function PasswordSection() {
 
 
   return (
-    <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
         <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
           <Lock className="h-4.5 w-4.5 text-amber-600" />
         </div>
         <div>
-          <h2 className="font-semibold text-slate-900">Change Password</h2>
-          <p className="text-xs text-slate-500">Use a strong, unique password</p>
+          <h2 className="font-semibold text-slate-900 dark:text-white">Change Password</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Use a strong, unique password</p>
         </div>
       </div>
 
@@ -245,14 +248,14 @@ function PasswordSection() {
 
 function SecuritySection() {
   return (
-    <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
       <div className="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
         <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
           <Shield className="h-4.5 w-4.5 text-emerald-600" />
         </div>
         <div>
-          <h2 className="font-semibold text-slate-900">Account Security</h2>
-          <p className="text-xs text-slate-500">Your account protection details</p>
+          <h2 className="font-semibold text-slate-900 dark:text-white">Account Security</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Your account protection details</p>
         </div>
       </div>
       <div className="space-y-3">
@@ -261,10 +264,10 @@ function SecuritySection() {
           { label: 'Session Tokens', value: 'JWT with 15-min access + 7-day refresh', badge: 'Active', badgeColor: 'bg-emerald-100 text-emerald-700' },
           { label: 'Data Encryption', value: 'Passwords hashed with bcrypt (10 rounds)', badge: 'Enabled', badgeColor: 'bg-blue-100 text-blue-700' },
         ].map(item => (
-          <div key={item.label} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
+          <div key={item.label} className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
             <div>
-              <p className="text-sm font-medium text-slate-800">{item.label}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{item.value}</p>
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{item.label}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.value}</p>
             </div>
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${item.badgeColor}`}>{item.badge}</span>
           </div>
@@ -280,8 +283,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1.5">Manage your account preferences and security.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1.5">Manage your account preferences and security.</p>
       </div>
 
       <motion.div

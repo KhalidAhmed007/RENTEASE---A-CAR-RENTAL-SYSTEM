@@ -16,7 +16,7 @@ export const cancelBooking = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const getBookingById = catchAsync(async (req: Request, res: Response) => {
-  const booking = await bookingService.getBookingById(req.params.id, req.user!.id, req.user!.role);
+  const booking = await bookingService.getBookingById(req.params.id as string, req.user!.id, req.user!.role);
   res.status(200).json(new ApiResponse(200, booking, 'Booking retrieved successfully'));
 });
 
