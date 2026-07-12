@@ -66,3 +66,17 @@ export const getPaymentByBooking = catchAsync(async (req: Request, res: Response
   const payment = await paymentService.getPaymentByBookingId(req.params.bookingId as string, req.user!.id);
   res.status(200).json(new ApiResponse(200, payment, payment ? 'Payment found' : 'No payment for this booking'));
 });
+/**
+ * POST /api/v1/payments/demo-capture
+ * Demo-only endpoint: marks a booking as confirmed and creates a "captured"
+ * payment record WITHOUT going through Razorpay. Safe to use in test/dev.
+ */
+export const demoCapture = catchAsync(async (req: Request, res: Response) => {
+  const { bookingId } = req.body;
+  if (!bookingId) {
+    res.status(400).json(new ApiResponse(400, null, 'bookingId is required'));
+    return;
+  }
+  const result = await paymentService.demoCapture(bookingId, req.user!.id);
+  res.status(200).json(new ApiResponse(200, result, 'Demo payment captured successfully'));
+});

@@ -1,77 +1,26 @@
 'use client';
 
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, CheckCheck, X, Tag, CalendarCheck, CreditCard, Clock, BellOff } from 'lucide-react';
+import { useNotificationStore } from '@/lib/store/notificationStore';
+import type { AppNotification } from '@/lib/store/notificationStore';
 
-interface Notification {
-  id: string;
-  type: 'booking' | 'payment' | 'offer' | 'reminder';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
-
-// Demo notifications — in production these would come from the API
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'n1',
-    type: 'booking',
-    title: 'Booking Confirmed',
-    message: 'Your booking for BMW X5 has been confirmed for Jun 15.',
-    time: '2 hours ago',
-    read: false,
-  },
-  {
-    id: 'n2',
-    type: 'payment',
-    title: 'Payment Successful',
-    message: '₹8,500 payment received for booking #BK2024-001.',
-    time: '1 day ago',
-    read: false,
-  },
-  {
-    id: 'n3',
-    type: 'offer',
-    title: 'New Offer Available 🎉',
-    message: 'Weekend Sale is live! Get 20% off on all sedan bookings.',
-    time: '2 days ago',
-    read: true,
-  },
-  {
-    id: 'n4',
-    type: 'reminder',
-    title: 'Pickup Reminder',
-    message: 'Your Toyota Camry pickup is tomorrow at 9:00 AM.',
-    time: '3 days ago',
-    read: true,
-  },
-];
-
-const TYPE_CONFIG = {
-  booking: { icon: CalendarCheck, bg: 'bg-blue-100 dark:bg-blue-900/40', color: 'text-blue-600 dark:text-blue-400' },
-  payment: { icon: CreditCard, bg: 'bg-emerald-100 dark:bg-emerald-900/40', color: 'text-emerald-600 dark:text-emerald-400' },
-  offer: { icon: Tag, bg: 'bg-amber-100 dark:bg-amber-900/40', color: 'text-amber-600 dark:text-amber-400' },
-  reminder: { icon: Clock, bg: 'bg-violet-100 dark:bg-violet-900/40', color: 'text-violet-600 dark:text-violet-400' },
+const TYPE_CONFIG: Record<string, { icon: React.ElementType; bg: string; color: string }> = {
+  booking:  { icon: CalendarCheck, bg: 'bg-blue-100 dark:bg-blue-900/40',    color: 'text-blue-600 dark:text-blue-400' },
+  payment:  { icon: CreditCard,    bg: 'bg-emerald-100 dark:bg-emerald-900/40', color: 'text-emerald-600 dark:text-emerald-400' },
+  offer:    { icon: Tag,           bg: 'bg-amber-100 dark:bg-amber-900/40',   color: 'text-amber-600 dark:text-amber-400' },
+  promo:    { icon: Tag,           bg: 'bg-violet-100 dark:bg-violet-900/40', color: 'text-violet-600 dark:text-violet-400' },
+  reminder: { icon: Clock,         bg: 'bg-violet-100 dark:bg-violet-900/40', color: 'text-violet-600 dark:text-violet-400' },
+  alert:    { icon: Clock,         bg: 'bg-amber-100 dark:bg-amber-900/40',   color: 'text-amber-600 dark:text-amber-400' },
+  system:   { icon: CreditCard,    bg: 'bg-slate-100 dark:bg-slate-800',      color: 'text-slate-600 dark:text-slate-300' },
 };
 
 export function NotificationsCenter() {
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+  const { notifications, markRead, markAllRead, dismiss } = useNotificationStore();
 
+  // Only show the latest 5 in the sidebar widget
+  const visible = notifications.slice(0, 5);
   const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const dismiss = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
 
   return (
     <div>
@@ -92,7 +41,7 @@ export function NotificationsCenter() {
         </div>
         {unreadCount > 0 && (
           <button
-            onClick={markAllAsRead}
+            onClick={markAllRead}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             aria-label="Mark all notifications as read"
           >
@@ -103,7 +52,7 @@ export function NotificationsCenter() {
       </div>
 
       {/* Notification list */}
-      {notifications.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="py-10 text-center">
           <BellOff className="h-10 w-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">You're all caught up!</p>
@@ -112,8 +61,8 @@ export function NotificationsCenter() {
       ) : (
         <div className="space-y-2" role="list" aria-label="Notifications">
           <AnimatePresence initial={false}>
-            {notifications.map((notification) => {
-              const config = TYPE_CONFIG[notification.type];
+            {visible.map((notification: AppNotification) => {
+              const config = TYPE_CONFIG[notification.type] ?? TYPE_CONFIG.system;
               const Icon = config.icon;
 
               return (
@@ -140,9 +89,9 @@ export function NotificationsCenter() {
                   {/* Content */}
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={() => markRead(notification.id)}
                     tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && markAsRead(notification.id)}
+                    onKeyDown={(e) => e.key === 'Enter' && markRead(notification.id)}
                     role="button"
                     aria-label={`Mark "${notification.title}" as read`}
                   >

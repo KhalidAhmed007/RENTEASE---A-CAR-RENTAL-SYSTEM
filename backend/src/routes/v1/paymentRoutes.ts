@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createOrder,
   verifyPayment,
+  demoCapture,
   getMyPayments,
   getPaymentById,
   getPaymentByBooking,
@@ -16,6 +17,7 @@ router.use(protect);
 // ─── Payment Flow ─────────────────────────────────────────────────────────────
 router.post('/create-order', createOrder);     // Step 1: Create Razorpay order
 router.post('/verify', verifyPayment);          // Step 2: Verify after checkout
+router.post('/demo-capture', demoCapture);      // Demo bypass (no gateway)
 
 // ─── Payment Queries ──────────────────────────────────────────────────────────
 router.get('/history', getMyPayments);                    // All user payments

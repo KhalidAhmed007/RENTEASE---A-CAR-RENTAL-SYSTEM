@@ -212,4 +212,48 @@ export const paymentService = {
 
     return payment;
   },
+
+  // ─── Demo Capture (no gateway, dev/portfolio only) ────────────────────────
+  async demoCapture(bookingId: string, userId: string) {
+    const booking = await Booking.findById(bookingId);
+    if (!booking) throw new AppError(404, 'Booking not found');
+    if (booking.user.toString() !== userId) throw new AppError(403, 'Not authorized');
+    if (booking.paymentStatus === 'paid') throw new AppError(400, 'Already paid');
+    if (booking.status === 'cancelled') throw new AppError(400, 'Booking is cancelled');
+
+    // Create or update a payment record marked as succeeded
+    const demoPaymentId = `demo_${Date.now()}`;
+    const payment = await Payment.findOneAndUpdate(
+      { booking: booking._id },
+      {
+        $set: {
+          user: userId,
+          razorpayOrderId: `demo_order_${bookingId}`,
+          razorpayPaymentId: demoPaymentId,
+          paymentProvider: 'razorpay',
+          amount: booking.totalAmount,
+          currency: 'INR',
+          status: 'succeeded',
+          paidAt: new Date(),
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    // Mark booking confirmed
+    booking.status = 'confirmed';
+    booking.paymentStatus = 'paid';
+    booking.payment = payment._id;
+    await booking.save();
+
+    logger.info(`Demo payment captured for booking ${bookingId} (no gateway)`);
+
+    return {
+      success: true,
+      paymentId: payment._id,
+      bookingId: booking._id,
+      amount: booking.totalAmount,
+      transactionId: demoPaymentId,
+    };
+  },
 };

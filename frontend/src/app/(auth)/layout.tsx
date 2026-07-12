@@ -18,20 +18,22 @@ const STATS = [
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, _hasHydrated, setAccessToken, logout } = useAuthStore();
   const router = useRouter();
-  // null = still validating, true = valid session, false = no valid session
+  // null  = store not yet hydrated (wait)
+  // true  = valid session → redirect to dashboard
+  // false = no session → show login/signup form
   const [sessionValid, setSessionValid] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!_hasHydrated) return;
 
     if (!isAuthenticated) {
-      // Definitely not authenticated — show the login form immediately
+      // Not logged in at all — show the form immediately, no network call needed.
       setSessionValid(false);
       return;
     }
 
-    // isAuthenticated is true in localStorage, but the cookie may be missing/expired.
-    // Validate by attempting a silent token refresh before redirecting anywhere.
+    // isAuthenticated is true in localStorage.
+    // Verify the refresh-token cookie is still valid before redirecting.
     api.post('/auth/refresh-token')
       .then((res) => {
         const newToken = res.data?.data?.accessToken;
@@ -40,13 +42,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         router.replace('/dashboard');
       })
       .catch(() => {
-        // Cookie is gone / expired — clear stale Zustand state, show the form
+        // Cookie gone / expired — wipe stale Zustand state and show the form.
         logout();
         setSessionValid(false);
       });
-  }, [_hasHydrated, isAuthenticated, router, setAccessToken, logout]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_hasHydrated, isAuthenticated]);   // stable refs only — avoids re-firing on every render
 
-  // Spinner while hydrating or while the refresh check is in flight
+  // Only show spinner while the store is hydrating OR while the refresh call is pending.
+  // Once we know the user is NOT authenticated (_hasHydrated && !isAuthenticated),
+  // sessionValid is immediately false and we render the form on the next tick.
   if (!_hasHydrated || sessionValid === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">

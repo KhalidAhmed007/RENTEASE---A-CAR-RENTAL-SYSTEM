@@ -375,27 +375,13 @@ const seedCars = async () => {
     await mongoose.connect(env.mongoUri, ATLAS_OPTIONS);
     logger.info('Connected to MongoDB');
 
-    let inserted = 0;
-    let updated = 0;
+    // Wipe ALL existing cars so stale external/broken image URLs are gone.
+    const deleted = await Car.deleteMany({});
+    logger.info(`Cleared ${deleted.deletedCount} existing car records`);
 
-    for (const car of sampleCars) {
-      const result = await Car.findOneAndUpdate(
-        { registrationNumber: car.registrationNumber },
-        { $set: car },
-        { upsert: true, new: true, runValidators: true }
-      );
-      if (result) {
-        const r = result as any;
-        const wasInserted =
-          r.createdAt &&
-          r.updatedAt &&
-          Math.abs(r.createdAt.getTime() - r.updatedAt.getTime()) < 1000;
-        if (wasInserted) inserted++;
-        else updated++;
-      }
-    }
+    const inserted = await Car.insertMany(sampleCars, { ordered: false });
+    logger.info(`Seed complete — ${inserted.length} cars inserted`);
 
-    logger.info(`Seed complete — ${inserted} inserted, ${updated} updated (${sampleCars.length} total)`);
     process.exit(0);
   } catch (error) {
     logger.error('Error seeding cars:', error);

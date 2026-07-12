@@ -6,21 +6,50 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { Loader2 } from 'lucide-react';
+
+// ─── Redirect screen shown while router.replace('/login') is in-flight ─────────
+function RedirectingScreen() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <p className="text-sm font-medium text-slate-500">Redirecting to login…</p>
+    </div>
+  );
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, _hasHydrated, logout } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
-    if (_hasHydrated && !isAuthenticated) {
-      import('@/lib/api/authApi').then(({ authApi }) => authApi.logout().catch(() => {}));
+    // If the store has hydrated and the user is not authenticated (e.g. direct
+    // URL access to /dashboard while logged out, or session expired), redirect
+    // to login. We do NOT call this when already mid-redirect (initiated by the
+    // topbar logout button) to prevent competing router.replace/push calls.
+    if (_hasHydrated && !isAuthenticated && !redirecting) {
+      setRedirecting(true);
       router.replace('/login');
     }
-  }, [_hasHydrated, isAuthenticated, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_hasHydrated, isAuthenticated]);
 
-  if (!_hasHydrated) return null;
-  if (!isAuthenticated) return null;
+  // Still hydrating from localStorage — show spinner, never a blank white page
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  // Hydrated but not authenticated (e.g. just logged out) — show redirect screen
+  // until Next.js completes the navigation to /login
+  if (!isAuthenticated || redirecting) {
+    return <RedirectingScreen />;
+  }
 
   return (
     <ThemeProvider>

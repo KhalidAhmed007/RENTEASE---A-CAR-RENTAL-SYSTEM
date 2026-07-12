@@ -41,6 +41,9 @@ const nextConfig: NextConfig = {
   },
 
   images: {
+    // Allow local static images (from /public) to bypass the optimizer.
+    // This is the most reliable option during development.
+    unoptimized: true,
     remotePatterns: [
       {
         // Cloudinary — primary car image host (res.cloudinary.com/<cloud>/...)
@@ -61,6 +64,11 @@ const nextConfig: NextConfig = {
         // Unsplash — verified high-quality public domain car images
         protocol: "https",
         hostname: "images.unsplash.com",
+      },
+      {
+        // localhost — for any locally-served images during development
+        protocol: "http",
+        hostname: "localhost",
       },
     ],
   },

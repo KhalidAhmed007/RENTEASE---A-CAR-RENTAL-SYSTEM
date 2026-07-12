@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Calendar, CreditCard, ShieldCheck, CheckCircle2, MapPin, AlignLeft, User } from 'lucide-react';
+import { ArrowLeft, Calendar, CreditCard, ShieldCheck, CheckCircle2, MapPin, AlignLeft, User, TestTube2, Copy, Info } from 'lucide-react';
 import { carApi } from '@/lib/api/carApi';
 import { bookingApi } from '@/lib/api/bookingApi';
 import { paymentApi } from '@/lib/api/paymentApi';
@@ -97,6 +97,37 @@ function BookingFlow() {
       router.push('/cars');
     });
   }, [carId, router, setValue]);
+
+  // ── Demo Payment bypass (for development / portfolio demos) ──────────────
+  const [copyMsg, setCopyMsg] = useState('');
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyMsg(label);
+      setTimeout(() => setCopyMsg(''), 1800);
+    });
+  };
+
+  const runDemoPayment = async (data: BookingForm) => {
+    if (!car) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      const bookingResp = await bookingApi.createBooking({
+        carId: car._id,
+        startDate: data.startDate,
+        endDate: data.endDate,
+      });
+      // Mark the payment as captured without going through the gateway
+      await paymentApi.demoCapture(bookingResp.data._id);
+      setSuccessModalOpen(true);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || 'Demo payment failed. Please try again.';
+      setError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const onSubmit = async (data: BookingForm) => {
     if (!car) return;
@@ -259,10 +290,61 @@ function BookingFlow() {
                 <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-4">
                   <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" /> 5. Payment Method
                 </h2>
+
+                {/* Test Card Details Banner */}
+                <div className="mb-4 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/20 overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800/40">
+                    <TestTube2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">Razorpay Test Mode — Indian Cards</span>
+                  </div>
+                  <div className="p-4 space-y-2.5">
+                    {[
+                      { label: 'Card Number', value: '4111 1111 1111 1111' },
+                      { label: 'Expiry', value: '12/26' },
+                      { label: 'CVV', value: '123' },
+                      { label: 'OTP (if asked)', value: '1234' },
+                      { label: 'UPI VPA', value: 'success@razorpay' },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between gap-3">
+                        <span className="text-xs text-amber-700 dark:text-amber-400 font-medium w-28">{label}</span>
+                        <code className="text-xs font-mono font-bold text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-md flex-1">{value}</code>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(value, label)}
+                          className="shrink-0 p-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors"
+                          title={`Copy ${label}`}
+                        >
+                          {copyMsg === label ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Demo bypass */}
+                <div className="mb-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Skip Gateway (Portfolio Demo)</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">Instantly confirm the booking without opening Razorpay. Use this to demo a successful payment flow.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={days === 0 || isSubmitting}
+                    onClick={handleSubmit(runDemoPayment)}
+                    className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold transition-colors"
+                  >
+                    <TestTube2 className="h-4 w-4" />
+                    Use Demo Payment — Skip Gateway
+                  </button>
+                </div>
+
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-start gap-3">
                   <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    You will be redirected to Razorpay to complete your payment securely. We do not store your card details on our servers.
+                    Or click "Proceed To Payment" below to go through the real Razorpay checkout. We do not store your card details.
                   </p>
                 </div>
               </section>

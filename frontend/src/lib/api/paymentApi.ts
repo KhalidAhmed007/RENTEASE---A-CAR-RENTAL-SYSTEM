@@ -12,6 +12,11 @@ export const paymentApi = {
     return response.data;
   },
   
+  demoCapture: async (bookingId: string) => {
+    const response = await api.post<ApiResponse<{ success: boolean }>>('/payments/demo-capture', { bookingId });
+    return response.data;
+  },
+
   getHistory: async () => {
     const response = await api.get<ApiResponse<unknown[]>>('/payments/history');
     return response.data.data;

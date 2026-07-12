@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useThemeStore } from '@/lib/store/themeStore';
 import { useAuthStore } from '@/lib/store/authStore';
+import { useNotificationStore } from '@/lib/store/notificationStore';
 import { bookingApi } from '@/lib/api/bookingApi';
 
 interface DashboardTopbarProps {
@@ -19,6 +20,7 @@ interface DashboardTopbarProps {
 export function DashboardTopbar({ onMobileMenuToggle }: DashboardTopbarProps) {
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
+  const unreadCount = useNotificationStore((s) => s.notifications.filter((n) => !n.read).length);
   const router = useRouter();
   const [searchFocused, setSearchFocused] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -49,9 +51,16 @@ export function DashboardTopbar({ onMobileMenuToggle }: DashboardTopbarProps) {
   }, []);
 
   const handleLogout = async () => {
-    import('@/lib/api/authApi').then(({ authApi }) => authApi.logout().catch(() => {}));
-    logout();
-    router.push('/login');
+    try {
+      // Fire-and-forget the backend logout (clears the HTTP-only refresh cookie)
+      await import('@/lib/api/authApi').then(({ authApi }) => authApi.logout().catch(() => {}));
+    } finally {
+      // Clear Zustand state synchronously
+      logout();
+      // Use a hard redirect instead of router.push to guarantee the login page
+      // mounts fresh with no stale React state from the dashboard.
+      window.location.href = '/login';
+    }
   };
 
   const initials = `${user?.firstName?.[0] ?? ''}`.toUpperCase();
@@ -148,12 +157,16 @@ export function DashboardTopbar({ onMobileMenuToggle }: DashboardTopbarProps) {
 
         {/* Notification bell */}
         <Link
-          href="#notifications"
+          href="/dashboard/notifications"
           className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 border border-slate-200/60 dark:border-slate-800"
-          aria-label="Notifications"
+          aria-label={`Notifications${unreadCount > 0 ? ` — ${unreadCount} unread` : ''}`}
         >
           <Bell className="h-4 w-4" />
-          <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-950 animate-pulse" aria-label="Unread notifications" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-rose-500 text-white text-[9px] font-extrabold flex items-center justify-center ring-2 ring-white dark:ring-slate-950">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </Link>
 
         {/* Divider */}

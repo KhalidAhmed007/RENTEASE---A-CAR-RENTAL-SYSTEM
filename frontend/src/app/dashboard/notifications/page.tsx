@@ -1,140 +1,52 @@
 'use client';
 
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bell, CheckCheck, Trash2, Car, Calendar, CreditCard,
+  Bell, CheckCheck, Trash2, Calendar, CreditCard,
   Shield, Tag, AlertTriangle, Info, CheckCircle2, X, Filter
 } from 'lucide-react';
+import { useNotificationStore } from '@/lib/store/notificationStore';
+import type { AppNotification, NotifType } from '@/lib/store/notificationStore';
+import { useState } from 'react';
 
-// ─── Types ──────────────────────────────────────────────────────────────────────
-type NotifType = 'booking' | 'payment' | 'system' | 'promo' | 'alert';
+// ─── Config ───────────────────────────────────────────────────────────────────
 
-interface Notification {
-  id: string;
-  type: NotifType;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  actionLabel?: string;
-  actionHref?: string;
-}
-
-// ─── Static demo notifications ──────────────────────────────────────────────────
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'booking',
-    title: 'Booking Confirmed',
-    message: 'Your booking for BMW 5 Series (24 Jun – 26 Jun) has been confirmed. Get ready for your trip!',
-    time: '2 hours ago',
-    read: false,
-    actionLabel: 'View Booking',
-    actionHref: '/dashboard/bookings',
-  },
-  {
-    id: '2',
-    type: 'payment',
-    title: 'Payment Received',
-    message: 'We received your payment of ₹9,000 for booking #A4F9B2. A receipt has been sent to your email.',
-    time: '5 hours ago',
-    read: false,
-    actionLabel: 'View Payments',
-    actionHref: '/dashboard/payments',
-  },
-  {
-    id: '3',
-    type: 'promo',
-    title: '🎉 Weekend Special — 20% Off!',
-    message: 'Book any car this weekend and get 20% off. Use code WEEKEND20 at checkout. Offer expires Sunday midnight.',
-    time: '1 day ago',
-    read: false,
-    actionLabel: 'Browse Cars',
-    actionHref: '/cars',
-  },
-  {
-    id: '4',
-    type: 'alert',
-    title: 'Upcoming Trip Reminder',
-    message: 'Your rental of Audi A6 starts tomorrow (25 Jun). Please ensure your documents are ready.',
-    time: '1 day ago',
-    read: true,
-    actionLabel: 'View Details',
-    actionHref: '/dashboard/bookings',
-  },
-  {
-    id: '5',
-    type: 'system',
-    title: 'Profile Updated',
-    message: 'Your profile information was successfully updated. If this wasn\'t you, please change your password immediately.',
-    time: '3 days ago',
-    read: true,
-    actionLabel: 'Go to Settings',
-    actionHref: '/dashboard/settings',
-  },
-  {
-    id: '6',
-    type: 'booking',
-    title: 'Booking Cancelled',
-    message: 'Your booking for Audi A6 (22 Jun – 26 Jun) was cancelled. Refund will be processed within 5–7 business days.',
-    time: '4 days ago',
-    read: true,
-  },
-  {
-    id: '7',
-    type: 'promo',
-    title: 'New Cars Added to Fleet',
-    message: 'We\'ve added 12 new premium vehicles including Mercedes GLC, BMW X5, and Porsche Cayenne. Check them out!',
-    time: '5 days ago',
-    read: true,
-    actionLabel: 'Browse New Cars',
-    actionHref: '/cars',
-  },
-  {
-    id: '8',
-    type: 'system',
-    title: 'Security Notice',
-    message: 'Your account was accessed from a new device (Windows, Chrome). If this was you, no action is needed.',
-    time: '1 week ago',
-    read: true,
-  },
-];
-
-// ─── Config ─────────────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<NotifType, {
   icon: React.ElementType;
   iconBg: string;
   iconColor: string;
   label: string;
 }> = {
-  booking:  { icon: Calendar,     iconBg: 'bg-blue-100 dark:bg-blue-950/50',    iconColor: 'text-blue-600 dark:text-blue-400',    label: 'Booking' },
-  payment:  { icon: CreditCard,   iconBg: 'bg-emerald-100 dark:bg-emerald-950/50', iconColor: 'text-emerald-600 dark:text-emerald-400', label: 'Payment' },
-  system:   { icon: Shield,       iconBg: 'bg-slate-100 dark:bg-slate-800',     iconColor: 'text-slate-600 dark:text-slate-300',  label: 'System' },
-  promo:    { icon: Tag,          iconBg: 'bg-violet-100 dark:bg-violet-950/50', iconColor: 'text-violet-600 dark:text-violet-400', label: 'Promo' },
-  alert:    { icon: AlertTriangle, iconBg: 'bg-amber-100 dark:bg-amber-950/50', iconColor: 'text-amber-600 dark:text-amber-400', label: 'Alert' },
+  booking:  { icon: Calendar,      iconBg: 'bg-blue-100 dark:bg-blue-950/50',    iconColor: 'text-blue-600 dark:text-blue-400',    label: 'Booking' },
+  payment:  { icon: CreditCard,    iconBg: 'bg-emerald-100 dark:bg-emerald-950/50', iconColor: 'text-emerald-600 dark:text-emerald-400', label: 'Payment' },
+  system:   { icon: Shield,        iconBg: 'bg-slate-100 dark:bg-slate-800',     iconColor: 'text-slate-600 dark:text-slate-300',  label: 'System' },
+  promo:    { icon: Tag,           iconBg: 'bg-violet-100 dark:bg-violet-950/50', iconColor: 'text-violet-600 dark:text-violet-400', label: 'Promo' },
+  offer:    { icon: Tag,           iconBg: 'bg-amber-100 dark:bg-amber-950/50',  iconColor: 'text-amber-600 dark:text-amber-400',  label: 'Offer' },
+  alert:    { icon: AlertTriangle, iconBg: 'bg-amber-100 dark:bg-amber-950/50',  iconColor: 'text-amber-600 dark:text-amber-400',  label: 'Alert' },
+  reminder: { icon: Bell,          iconBg: 'bg-violet-100 dark:bg-violet-950/50', iconColor: 'text-violet-600 dark:text-violet-400', label: 'Reminder' },
 };
 
 const FILTER_OPTIONS = [
-  { key: 'all', label: 'All' },
-  { key: 'unread', label: 'Unread' },
+  { key: 'all',     label: 'All' },
+  { key: 'unread',  label: 'Unread' },
   { key: 'booking', label: 'Bookings' },
   { key: 'payment', label: 'Payments' },
-  { key: 'promo', label: 'Promos' },
-  { key: 'system', label: 'System' },
+  { key: 'promo',   label: 'Promos' },
+  { key: 'system',  label: 'System' },
 ];
 
-// ─── Single Notification Row ────────────────────────────────────────────────────
+// ─── Single Notification Row ──────────────────────────────────────────────────
+
 function NotifCard({
   notif,
   onRead,
   onDelete,
 }: {
-  notif: Notification;
+  notif: AppNotification;
   onRead: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
-  const cfg = TYPE_CONFIG[notif.type];
+  const cfg = TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.system;
   const Icon = cfg.icon;
 
   return (
@@ -178,7 +90,7 @@ function NotifCard({
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Action link */}
         {notif.actionLabel && notif.actionHref && (
           <a
             href={notif.actionHref}
@@ -212,34 +124,24 @@ function NotifCard({
   );
 }
 
-// ─── Page ───────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+  // All state now lives in the persistent Zustand store — survives page refreshes
+  const { notifications, markRead, markAllRead, dismiss, clearAll } = useNotificationStore();
   const [activeFilter, setActiveFilter] = useState('all');
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const filtered = notifications.filter(n => {
+  const filtered = notifications.filter((n) => {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'unread') return !n.read;
     return n.type === activeFilter;
   });
 
-  const handleRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const handleDelete = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const handleMarkAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
   const handleClearAll = () => {
-    if (window.confirm('Clear all notifications?')) {
-      setNotifications([]);
+    if (window.confirm('Clear all notifications? This cannot be undone.')) {
+      clearAll();
     }
   };
 
@@ -283,7 +185,7 @@ export default function NotificationsPage() {
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">
           <Filter className="h-4 w-4 text-slate-400" />
-          {FILTER_OPTIONS.map(opt => (
+          {FILTER_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               onClick={() => setActiveFilter(opt.key)}
@@ -308,7 +210,7 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-2 shrink-0">
             {unreadCount > 0 && (
               <button
-                onClick={handleMarkAllRead}
+                onClick={markAllRead}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl border border-blue-200 dark:border-blue-800 transition-colors"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
@@ -349,26 +251,26 @@ export default function NotificationsPage() {
         ) : (
           <motion.div key="list" className="space-y-3">
             {/* Unread section label */}
-            {activeFilter !== 'unread' && filtered.some(n => !n.read) && (
+            {activeFilter !== 'unread' && filtered.some((n) => !n.read) && (
               <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">
                 Unread
               </p>
             )}
             <AnimatePresence>
-              {filtered.filter(n => !n.read).map(n => (
-                <NotifCard key={n.id} notif={n} onRead={handleRead} onDelete={handleDelete} />
+              {filtered.filter((n) => !n.read).map((n) => (
+                <NotifCard key={n.id} notif={n} onRead={markRead} onDelete={dismiss} />
               ))}
             </AnimatePresence>
 
             {/* Read section label */}
-            {activeFilter !== 'unread' && filtered.some(n => n.read) && filtered.some(n => !n.read) && (
+            {activeFilter !== 'unread' && filtered.some((n) => n.read) && filtered.some((n) => !n.read) && (
               <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 pt-4 mb-2">
                 Earlier
               </p>
             )}
             <AnimatePresence>
-              {(activeFilter === 'unread' ? [] : filtered.filter(n => n.read)).map(n => (
-                <NotifCard key={n.id} notif={n} onRead={handleRead} onDelete={handleDelete} />
+              {(activeFilter === 'unread' ? [] : filtered.filter((n) => n.read)).map((n) => (
+                <NotifCard key={n.id} notif={n} onRead={markRead} onDelete={dismiss} />
               ))}
             </AnimatePresence>
           </motion.div>
@@ -379,7 +281,7 @@ export default function NotificationsPage() {
       {notifications.length > 0 && (
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-slate-400" />
-          <p>Notifications are stored locally. In-app real-time push notifications are coming soon.</p>
+          <p>Notification states are saved locally and persist across page refreshes.</p>
         </div>
       )}
     </div>

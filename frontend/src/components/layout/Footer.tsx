@@ -26,47 +26,48 @@ export function Footer() {
     <footer className="bg-slate-900 border-t border-slate-800 text-slate-400">
       {/* Upper Footer: Newsletter Banner */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 border-b border-slate-800">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-6 space-y-3">
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start lg:items-center">
+          {/* Left: copy */}
+          <div className="flex-1 space-y-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-900/40 text-blue-400 border border-blue-800/40">
               <Sparkles className="h-3 w-3" /> Exclusive Updates
             </span>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Get the latest updates on premium fleet & offers
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug">
+              Get the latest updates on premium fleet &amp; offers
             </h3>
             <p className="text-sm text-slate-400 max-w-md">
-              Subscribe to the RentEase newsletter and stay informed about new additions, seasonal discounts, and curated road trips.
+              Subscribe and stay informed about new additions, seasonal discounts, and curated road trips.
             </p>
           </div>
-          <div className="lg:col-span-6">
-            <form onSubmit={handleSubscribe} className="relative max-w-md lg:ml-auto">
-              {subscribed ? (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-950/40 border border-emerald-800/40 text-emerald-400 text-sm font-semibold animate-pulse">
-                  <CheckCircle2 className="h-4.5 w-4.5 shrink-0" />
-                  Thank you! You&apos;ve subscribed successfully.
+
+          {/* Right: form */}
+          <div className="w-full lg:w-auto lg:min-w-[400px]">
+            {subscribed ? (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-950/40 border border-emerald-800/40 text-emerald-400 text-sm font-semibold">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Thank you! You&apos;ve subscribed successfully.
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-slate-500 transition-colors"
+                  />
                 </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-500" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="Enter your email address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-slate-500 transition-colors"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md hover:shadow-blue-900/30 transition-all active:scale-[0.98]"
-                  >
-                    Subscribe <Send className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-            </form>
+                <button
+                  type="submit"
+                  className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md hover:shadow-blue-900/30 transition-all active:scale-[0.98] whitespace-nowrap"
+                >
+                  Subscribe <Send className="h-4 w-4" />
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>
@@ -219,10 +220,10 @@ export function Footer() {
             © {new Date().getFullYear()} RentEase Private Limited. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-xs text-slate-500">
-            <a href="#" className="hover:text-slate-300 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-300 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-slate-300 transition-colors">Refund Policy</a>
-            <a href="#" className="hover:text-slate-300 transition-colors">Sitemap</a>
+            <Link href="/privacy" className="hover:text-slate-300 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-slate-300 transition-colors">Terms of Service</Link>
+            <Link href="/cars" className="hover:text-slate-300 transition-colors">Browse Cars</Link>
+            <Link href="/" className="hover:text-slate-300 transition-colors">Home</Link>
           </div>
         </div>
       </div>
