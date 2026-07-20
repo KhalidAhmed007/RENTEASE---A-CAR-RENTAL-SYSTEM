@@ -9,11 +9,11 @@ const PROTECTED_PATHS = ['/dashboard', '/bookings', '/profile'];
 /** Auth pages — redirect to dashboard when already logged in */
 const AUTH_PAGES = ['/login', '/signup', '/forgot-password', '/reset-password'];
 
-// ─── Proxy ────────────────────────────────────────────────────────────────────
-// Next.js 16 renamed middleware.ts → proxy.ts and requires the exported
-// function to be named "proxy" (or a default export).
+// ─── Middleware ───────────────────────────────────────────────────────────────
+// Next.js requires this file to be named middleware.ts and the export
+// to be named "middleware" (or a default export).
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   /**

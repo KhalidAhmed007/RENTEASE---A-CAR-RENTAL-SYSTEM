@@ -30,8 +30,6 @@ export function AuthGuard({
     if (!_hasHydrated) return;
     
     if (!isAuthenticated) {
-      // Clear cookie to break potential redirect loop with proxy.ts
-      import('@/lib/api/authApi').then(({ authApi }) => authApi.logout().catch(() => {}));
       const target = `${redirectTo}?callbackUrl=${encodeURIComponent(pathname)}`;
       router.replace(target);
       return;
