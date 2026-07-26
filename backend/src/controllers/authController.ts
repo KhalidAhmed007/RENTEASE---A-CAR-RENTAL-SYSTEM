@@ -51,7 +51,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 export const logout = catchAsync(async (req: Request, res: Response) => {
   const isProd = env.nodeEnv === 'production';
   res.cookie('refreshToken', 'none', {
-    expires: new Date(Date.now() + 10 * 1000),
+    maxAge: 0,          // Expire immediately — browser removes cookie on receipt
     httpOnly: true,
     secure: isProd,
     sameSite: (isProd ? 'none' : 'strict') as 'none' | 'strict',

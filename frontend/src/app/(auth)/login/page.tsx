@@ -35,12 +35,12 @@ const item: Variants = {
 // ─── Inner form (needs Suspense because it uses useSearchParams) ──────────────
 
 function LoginForm() {
-  const { login, isLoading, error, setError } = useLogin();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl');
+  const justRegistered = searchParams.get('registered') === 'true';
+  const { login, isLoading, error, setError } = useLogin(callbackUrl);
   const { register, handleSubmit, formState: { errors } } =
     useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
-  const searchParams = useSearchParams();
-  const justRegistered = searchParams.get('registered') === 'true';
-
   return (
     <motion.div variants={container} initial="hidden" animate="show">
 

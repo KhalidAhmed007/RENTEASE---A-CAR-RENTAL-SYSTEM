@@ -45,9 +45,9 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch {
-        // Refresh failed — clear auth state but do NOT redirect here.
-        // Let individual pages / the auth layout handle the redirect gracefully
-        // so we avoid the jarring full-page reload caused by window.location.href.
+        // Refresh failed — clear auth state.
+        // DashboardLayout's useEffect watches isAuthenticated and will call
+        // window.location.replace('/login') automatically.
         useAuthStore.getState().logout();
         return Promise.reject(error);
       }

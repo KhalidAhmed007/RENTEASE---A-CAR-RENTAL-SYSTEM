@@ -25,19 +25,27 @@ export interface ResetPasswordPayload {
   password: string;
 }
 
+// ─── Shared response wrapper (mirrors backend ApiResponse class) ──────────────
+
+interface ApiResp<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
 // ─── API calls ───────────────────────────────────────────────────────────────
 
 export const authApi = {
   login: (data: LoginPayload) =>
-    api.post<{ data: { user: AuthUser; accessToken: string } }>('/auth/login', data),
+    api.post<ApiResp<{ user: AuthUser; accessToken: string }>>('/auth/login', data),
 
   register: (data: RegisterPayload) =>
-    api.post<{ data: { email: string } }>('/auth/register', data),
+    api.post<ApiResp<{ email: string }>>('/auth/register', data),
 
   logout: () => api.post('/auth/logout'),
 
   refreshToken: () =>
-    api.post<{ data: { accessToken: string } }>('/auth/refresh-token'),
+    api.post<ApiResp<{ accessToken: string }>>('/auth/refresh-token'),
 
   forgotPassword: (data: ForgotPasswordPayload) =>
     api.post('/auth/forgot-password', data),

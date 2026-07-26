@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import {
   LayoutDashboard, Car, CalendarClock, CreditCard, LogOut,
@@ -65,13 +65,15 @@ function NavItem({
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuthStore();
-  const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogout = () => {
-    import('@/lib/api/authApi').then(({ authApi }) => authApi.logout().catch(() => {}));
-    logout();
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await import('@/lib/api/authApi').then(({ authApi }) => authApi.logout().catch(() => {}));
+    } finally {
+      logout();
+      window.location.replace('/login');
+    }
   };
 
   const initials = `${user?.firstName?.[0] ?? ''}`.toUpperCase();

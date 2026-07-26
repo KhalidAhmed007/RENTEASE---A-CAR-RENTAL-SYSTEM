@@ -1,17 +1,16 @@
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { authApi, LoginPayload, RegisterPayload } from '@/lib/api/authApi';
 
 // ─── useLogin ────────────────────────────────────────────────────────────────
 
-export function useLogin() {
+export function useLogin(callbackUrl?: string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const loginStore = useAuthStore((s) => s.login);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const login = async (data: LoginPayload) => {
     setIsLoading(true);
@@ -20,7 +19,6 @@ export function useLogin() {
       const res = await authApi.login(data);
       const { user, accessToken } = res.data.data;
       loginStore(user, accessToken);
-      const callbackUrl = searchParams.get('callbackUrl');
       router.push(callbackUrl ?? (user.role === 'admin' ? '/dashboard/admin' : '/dashboard'));
     } catch (err: unknown) {
       const msg =

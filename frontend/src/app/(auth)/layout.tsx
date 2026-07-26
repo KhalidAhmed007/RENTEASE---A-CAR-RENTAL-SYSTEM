@@ -6,7 +6,6 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { api } from '@/lib/api/axios';
 
 const STATS = [
   { stat: '500+', label: 'Vehicles' },
@@ -16,7 +15,7 @@ const STATS = [
 ] as const;
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, _hasHydrated, setAccessToken, logout } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
   const router = useRouter();
   // null  = store not yet hydrated (wait)
   // true  = valid session → redirect to dashboard
@@ -32,22 +31,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    // isAuthenticated is true in localStorage.
-    // Verify the refresh-token cookie is still valid before redirecting.
-    api.post('/auth/refresh-token')
-      .then((res) => {
-        const newToken = res.data?.data?.accessToken;
-        if (newToken) setAccessToken(newToken);
-        setSessionValid(true);
-        router.replace('/dashboard');
-      })
-      .catch(() => {
-        // Cookie gone / expired — wipe stale Zustand state and show the form.
-        logout();
-        setSessionValid(false);
-      });
+    // isAuthenticated is true in localStorage — redirect to dashboard immediately.
+    // We do NOT verify via refresh-token here because:
+    // 1. The dashboard's own axios interceptor will handle 401s and refresh transparently.
+    // 2. Firing a cross-origin refresh-token call here can fail due to SameSite/cookie
+    //    issues and incorrectly wipe a valid session right after login.
+    setSessionValid(true);
+    router.replace('/dashboard');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_hasHydrated, isAuthenticated]);   // stable refs only — avoids re-firing on every render
+  }, [_hasHydrated, isAuthenticated]);
 
   // Only show spinner while the store is hydrating OR while the refresh call is pending.
   // Once we know the user is NOT authenticated (_hasHydrated && !isAuthenticated),

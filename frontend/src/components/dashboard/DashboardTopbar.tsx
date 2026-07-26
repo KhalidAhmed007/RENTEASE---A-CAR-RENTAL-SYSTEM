@@ -59,7 +59,7 @@ export function DashboardTopbar({ onMobileMenuToggle }: DashboardTopbarProps) {
       logout();
       // Use a hard redirect instead of router.push to guarantee the login page
       // mounts fresh with no stale React state from the dashboard.
-      window.location.href = '/login';
+      window.location.replace('/login');
     }
   };
 
