@@ -28,18 +28,22 @@ const globalLimiter = rateLimit({
 
 // ─── Security & Optimization Middlewares ─────────────────────────────────────
 app.use(helmet());
-// Allow:
-//  1. The exact production Vercel URL (from CLIENT_URL env var)
-//  2. ALL Vercel preview deployment URLs (*.vercel.app) — covers git branch previews
-//  3. localhost / 127.0.0.1 on any port — covers local development
+// Allowed origins:
+//  1. Exact CLIENT_URL from env (set on Render to your primary production URL)
+//  2. Any *.vercel.app deployment (production + preview branches)
+//  3. Any *.khaleedahmed.codes subdomain (custom domain, http or https)
+//  4. localhost / 127.0.0.1 on any port for local development
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
+    // Allow requests with no origin (curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
 
     const isAllowed =
       origin === env.clientUrl ||
-      /^https:\/\/[a-zA-Z0-9-]+(\.vercel\.app)$/.test(origin) ||
+      /^https?:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(origin) ||
+      /^https?:\/\/[a-zA-Z0-9-]+\.khaleedahmed\.codes$/.test(origin) ||
+      origin === 'http://rentease.khaleedahmed.codes'  ||
+      origin === 'https://rentease.khaleedahmed.codes' ||
       /^http:\/\/localhost:\d+$/.test(origin) ||
       /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
 
@@ -52,6 +56,7 @@ app.use(cors({
   },
   credentials: true,
 }));
+
 app.use(globalLimiter);
 app.use(compression());
 
