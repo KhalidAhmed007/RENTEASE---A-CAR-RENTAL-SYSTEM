@@ -37,18 +37,27 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
       try {
-        const res = await axios.post(`${BASE_URL}/auth/refresh-token`, {}, { withCredentials: true });
+        // 10-second timeout prevents Render cold-start hangs from being
+        // mistaken for an invalid session and incorrectly logging the user out.
+        const res = await axios.post(
+          `${BASE_URL}/auth/refresh-token`,
+          {},
+          { withCredentials: true, timeout: 10_000 }
+        );
         const newAccessToken = res.data?.data?.accessToken;
         if (!newAccessToken) throw new Error('No access token in refresh response');
 
         useAuthStore.getState().setAccessToken(newAccessToken);
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
-      } catch {
-        // Refresh failed — clear auth state.
-        // DashboardLayout's useEffect watches isAuthenticated and will call
-        // window.location.replace('/login') automatically.
-        useAuthStore.getState().logout();
+      } catch (refreshError: unknown) {
+        // Only clear auth state on a definitive auth rejection (401/403).
+        // Transient errors (network timeout, 5xx from Render cold start) should
+        // NOT log the user out — their session may still be perfectly valid.
+        const status = (refreshError as { response?: { status?: number } })?.response?.status;
+        if (status === 401 || status === 403) {
+          useAuthStore.getState().logout();
+        }
         return Promise.reject(error);
       }
     }

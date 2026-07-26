@@ -50,12 +50,16 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => localStorage),
 
       /**
-       * Persist user + isAuthenticated across page loads.
-       * accessToken is intentionally NOT persisted — it is re-obtained via
-       * the silent refresh call on 401 (see axios interceptor).
+       * Persist user, accessToken, and isAuthenticated across page loads.
+       * Persisting the accessToken avoids a mandatory cross-domain
+       * refresh-token network call on every page refresh, which was failing
+       * on Render cold starts and logging the user out immediately.
+       * If the stored token is expired the axios 401 interceptor will still
+       * silently refresh it — this is the happy-path optimisation.
        */
       partialize: (state) => ({
         user:            state.user,
+        accessToken:     state.accessToken,
         isAuthenticated: state.isAuthenticated,
       }),
 
