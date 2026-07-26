@@ -1,0 +1,30 @@
+name: 🏓 Keep Render Backend Alive
+
+# Pings the Render backend every 5 minutes so it never cold-starts.
+# GitHub Actions free tier gives 2,000 min/month. Each ping takes ~5s,
+# so 12 pings/hr × 24hr × 30d ≈ 720 min/month — well within the limit.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # every 5 minutes, 24/7
+  workflow_dispatch: # also allows a manual trigger from the GitHub UI
+
+jobs:
+  ping:
+    name: Ping Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: 🔔 Ping /api/health
+        run: |
+          echo "⏰ Pinging backend at $(date -u)"
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+            --max-time 30 \
+            https://rentease-a-car-rental-system.onrender.com/api/health)
+          echo "📡 HTTP status: $STATUS"
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+            echo "✅ Backend is awake"
+          else
+            echo "⚠️  Backend returned status $STATUS — it may be starting up"
+          fi
