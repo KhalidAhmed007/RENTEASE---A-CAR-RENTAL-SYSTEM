@@ -28,9 +28,29 @@ const globalLimiter = rateLimit({
 
 // ─── Security & Optimization Middlewares ─────────────────────────────────────
 app.use(helmet());
-app.use(cors({ 
-  origin: [env.clientUrl, /^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/], 
-  credentials: true 
+// Allow:
+//  1. The exact production Vercel URL (from CLIENT_URL env var)
+//  2. ALL Vercel preview deployment URLs (*.vercel.app) — covers git branch previews
+//  3. localhost / 127.0.0.1 on any port — covers local development
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const isAllowed =
+      origin === env.clientUrl ||
+      /^https:\/\/[a-zA-Z0-9-]+(\.vercel\.app)$/.test(origin) ||
+      /^http:\/\/localhost:\d+$/.test(origin) ||
+      /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error(`CORS policy: origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
 }));
 app.use(globalLimiter);
 app.use(compression());

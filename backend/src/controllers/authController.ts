@@ -10,13 +10,14 @@ const sendTokenResponse = (user: any, statusCode: number, res: Response, message
   const accessToken = jwtHelper.generateAccessToken(user._id, user.role);
   const refreshToken = jwtHelper.generateRefreshToken(user._id, user.role);
 
-  // SameSite=None is required for cross-domain deployments (Vercel frontend + Render backend).
-  // SameSite=None MUST be paired with Secure=true or browsers reject the cookie.
+  // SameSite=Lax works in all cases now because the Next.js rewrite on Vercel
+  // proxies /api/v1/* server-side — the browser only ever talks to the Vercel
+  // domain, so cookies are always same-site (never cross-domain).
   const isProd = env.nodeEnv === 'production';
   const cookieOptions = {
     httpOnly: true,
     secure: isProd,
-    sameSite: (isProd ? 'none' : 'strict') as 'none' | 'strict',
+    sameSite: 'lax' as const,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   };
 
@@ -51,10 +52,10 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 export const logout = catchAsync(async (req: Request, res: Response) => {
   const isProd = env.nodeEnv === 'production';
   res.cookie('refreshToken', 'none', {
-    maxAge: 0,          // Expire immediately — browser removes cookie on receipt
+    maxAge: 0,
     httpOnly: true,
     secure: isProd,
-    sameSite: (isProd ? 'none' : 'strict') as 'none' | 'strict',
+    sameSite: 'lax' as const,
   });
   res.status(200).json(new ApiResponse(200, null, 'Logged out successfully'));
 });

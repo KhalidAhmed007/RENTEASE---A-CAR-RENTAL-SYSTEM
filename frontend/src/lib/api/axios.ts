@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+// Always use the relative path — Next.js rewrites /api/v1/* → BACKEND_URL server-side.
+// This keeps all requests same-origin (Vercel domain) so cookies work in production.
+const BASE_URL = '/api/v1';
+
 
 export const api = axios.create({
   baseURL: BASE_URL,
