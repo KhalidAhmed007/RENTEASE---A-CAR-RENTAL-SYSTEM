@@ -5,10 +5,9 @@ import { MapPin, Star, ArrowLeft, Shield, ChevronRight, Settings, Fuel, Users, G
 import { Car } from '@/types';
 
 // Server Component fetch URL:
-// - INTERNAL_API_URL   → set this on Vercel/Render for production (e.g. https://api.yourdomain.com/api/v1)
-// - Falls back to the local backend in development (never use NEXT_PUBLIC_API_URL here —
-//   it is '/api/v1', a relative path that Node.js fetch cannot resolve without a host)
-const BASE_URL = process.env.INTERNAL_API_URL || 'http://localhost:5000/api/v1';
+// Uses BACKEND_URL (same var as next.config.ts rewrite) so Vercel server-side
+// fetches hit the real Render backend, not localhost.
+const BASE_URL = (process.env.BACKEND_URL?.trim() || 'http://localhost:5000') + '/api/v1';
 const PLACEHOLDER = '/images/cars/placeholder-car.jpg';
 
 async function getCar(id: string): Promise<Car | null> {
