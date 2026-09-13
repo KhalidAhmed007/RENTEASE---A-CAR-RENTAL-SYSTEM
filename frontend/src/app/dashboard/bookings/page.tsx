@@ -64,7 +64,7 @@ export default function BookingsPage() {
     setIsCancelling(true);
     try {
       await bookingApi.cancelBooking(selectedBookingId);
-      setBookings(prev => prev.map(b => b._id === selectedBookingId ? { ...b, status: 'cancelled' } : b));
+      setBookings(prev => prev.map(b => b.id === selectedBookingId ? { ...b, status: 'cancelled' } : b));
       setCancelModalOpen(false);
     } catch {
       alert('Failed to cancel booking. Please try again.');
@@ -228,7 +228,7 @@ export default function BookingsPage() {
               <SectionHeading icon={Calendar} title="Upcoming Trips" subtitle={`${upcomingBookings.length} scheduled`} />
               <div className="grid gap-5">
                 {upcomingBookings.map((b, i) => (
-                  <BookingCard key={b._id} booking={b} index={i} onCancel={() => handleCancelClick(b._id)} variant="upcoming" />
+                  <BookingCard key={b.id} booking={b} index={i} onCancel={() => handleCancelClick(b.id)} variant="upcoming" />
                 ))}
               </div>
             </section>
@@ -258,7 +258,7 @@ export default function BookingsPage() {
               </div>
               <div className="grid gap-4">
                 {pastBookings.map((b, i) => (
-                  <BookingCard key={b._id} booking={b} index={i} onCancel={() => handleCancelClick(b._id)} variant="history" />
+                  <BookingCard key={b.id} booking={b} index={i} onCancel={() => handleCancelClick(b.id)} variant="history" />
                 ))}
               </div>
             </section>
@@ -324,8 +324,8 @@ function BookingCard({
   const isPending     = booking.status === 'pending';
   const isHistory     = variant === 'history';
 
-  // Booking reference (last 8 chars of _id)
-  const ref = booking._id.slice(-8).toUpperCase();
+  // Booking reference (last 8 chars of id)
+  const ref = booking.id.slice(-8).toUpperCase();
 
   return (
     <motion.div
@@ -385,10 +385,10 @@ function BookingCard({
             </div>
 
             {/* Location */}
-            {car?.location?.address && (
+            {car?.locationAddress && (
               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
-                <span className="line-clamp-1">{car.location.address}</span>
+                <span className="line-clamp-1">{car.locationAddress}</span>
               </div>
             )}
 
@@ -422,9 +422,9 @@ function BookingCard({
               )}
 
               {/* Rebook — only completed/cancelled */}
-              {['completed', 'cancelled'].includes(booking.status) && car?._id && (
+              {['completed', 'cancelled'].includes(booking.status) && car?.id && (
                 <Link
-                  href={`/cars/${car._id}`}
+                  href={`/cars/${car.id}`}
                   className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-200 dark:border-emerald-800 transition-colors"
                 >
                   <RotateCcw className="h-3.5 w-3.5" /> Rebook
@@ -432,9 +432,9 @@ function BookingCard({
               )}
 
               {/* View Car */}
-              {car?._id && (
+              {car?.id && (
                 <Link
-                  href={`/cars/${car._id}`}
+                  href={`/cars/${car.id}`}
                   className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-colors"
                 >
                   View Car <ChevronRight className="h-3.5 w-3.5" />

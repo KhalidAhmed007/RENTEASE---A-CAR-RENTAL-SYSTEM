@@ -27,6 +27,10 @@ import type { NextConfig } from "next";
 const BACKEND_URL = process.env.BACKEND_URL?.trim() || "http://localhost:5000";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
+
   async rewrites() {
     return [
       {

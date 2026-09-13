@@ -1,17 +1,16 @@
 export interface Car {
-  _id: string;
+  id: string;
   make: string;
   carModel: string;
   year: number;
   registrationNumber: string;
   category: 'sedan' | 'suv' | 'luxury' | 'electric';
   dailyRate: number;
-  status: 'available' | 'maintenance' | 'retired';
-  location: {
-    type: 'Point';
-    coordinates: [number, number];
-    address: string;
-  };
+  /** Matches the CarStatus enum: available | rented | maintenance | retired */
+  status: 'available' | 'rented' | 'maintenance' | 'retired';
+  locationAddress: string;
+  locationLat: number | null;
+  locationLng: number | null;
   features: string[];
   images: string[];
   averageRating: number;
@@ -48,16 +47,23 @@ export interface CarFilters {
 }
 
 export interface Booking {
-  _id: string;
-  user: string | { _id: string; [key: string]: unknown };
-  car: Car | string | { _id: string; make?: string; carModel?: string; [key: string]: unknown };
+  id: string;
+  userId: string;
+  carId: string;
+  car: Car | null;
   startDate: string;
   endDate: string;
   totalDays: number;
   dailyRateAtBooking: number;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'active' | 'cancelled' | 'completed';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   cancellationReason?: string;
+  payment?: {
+    id: string;
+    status: string;
+    amount: number;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,3 +84,36 @@ export interface PaginatedBookingsResponse {
     totalPages: number;
   };
 }
+
+export interface Payment {
+  id: string;
+  bookingId: string;
+  userId: string;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  razorpaySignature: string | null;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'refunded';
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  booking?: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    totalAmount: number;
+    totalDays: number;
+    status: string;
+    paymentStatus: string;
+    car?: Car | null;
+  };
+}
+
+/** Shape returned by analyticsService.getCarUtilization() */
+export interface CarUtilizationItem {
+  category: string;
+  totalBookedDays: number;
+  revenueGenerated: number;
+}
+

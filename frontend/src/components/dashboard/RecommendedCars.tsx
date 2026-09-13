@@ -99,7 +99,7 @@ function RecommendedCarCard({ car, index }: { car: CarType; index: number }) {
             </p>
           </div>
           <Link
-            href={`/cars/${car._id}`}
+            href={`/cars/${car.id}`}
             className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
             aria-label={`Book ${car.make} ${car.carModel}`}
           >
@@ -159,7 +159,7 @@ export function RecommendedCars({ cars }: RecommendedCarsProps) {
         aria-label="Recommended cars carousel"
       >
         {cars.map((car, i) => (
-          <div key={car._id} className="snap-start" role="listitem">
+          <div key={car.id} className="snap-start" role="listitem">
             <RecommendedCarCard car={car} index={i} />
           </div>
         ))}

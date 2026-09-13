@@ -50,7 +50,7 @@ export function useDashboardData(): DashboardData {
           const recent = bookings.slice(0, 5);
           const spent = bookings
             .filter((b) => b.status === 'completed')
-            .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+            .reduce((sum, b) => sum + parseFloat(String(b.totalAmount || 0)), 0);
 
           setUpcomingBookings(upcoming);
           setRecentBookings(recent);

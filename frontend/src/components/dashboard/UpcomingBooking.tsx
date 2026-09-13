@@ -103,7 +103,7 @@ export function UpcomingBookingCard({ booking }: UpcomingBookingCardProps) {
                 {booking.totalDays} day{booking.totalDays !== 1 ? 's' : ''}
               </InfoRow>
               <InfoRow icon={MapPin} label="Location">
-                {car?.location?.address?.split(',')[0] ?? 'Pickup point'}
+                {car?.locationAddress?.split(',')[0] ?? 'Pickup point'}
               </InfoRow>
             </div>
 
@@ -128,7 +128,7 @@ export function UpcomingBookingCard({ booking }: UpcomingBookingCardProps) {
         {/* Action buttons */}
         <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-3">
           <Link
-            href={`/dashboard/bookings/${booking._id}`}
+            href={`/dashboard/bookings/${booking.id}`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
             aria-label="View booking details"
           >

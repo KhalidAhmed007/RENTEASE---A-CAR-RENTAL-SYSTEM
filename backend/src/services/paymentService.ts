@@ -1,9 +1,9 @@
 import crypto from 'crypto';
 import { razorpay } from '../config/razorpay';
-import Booking from '../models/Booking';
-import Payment from '../models/Payment';
+import { prisma } from '../config/prisma';
 import { AppError } from '../middlewares/errorMiddleware';
 import logger from '../utils/logger';
+import { BookingStatus, CarStatus, PaymentRecordStatus } from '@prisma/client';
 
 /**
  * ─── Payment Service ──────────────────────────────────────────────────────────
@@ -21,12 +21,16 @@ import logger from '../utils/logger';
 export const paymentService = {
   // ─── Create Razorpay Order ────────────────────────────────────────────────
   async createOrder(bookingId: string, userId: string) {
-    const booking = await Booking.findById(bookingId).populate('car', 'make carModel year images');
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        car: { select: { id: true, make: true, carModel: true, year: true, images: true } },
+      },
+    });
 
     if (!booking) throw new AppError(404, 'Booking not found');
-    if (booking.user.toString() !== userId) throw new AppError(403, 'Not authorized to pay for this booking');
+    if (booking.userId !== userId) throw new AppError(403, 'Not authorized to pay for this booking');
 
-    // Only allow payment for pending-payment bookings
     if (booking.paymentStatus === 'paid') {
       throw new AppError(400, 'Payment already completed for this booking');
     }
@@ -37,16 +41,15 @@ export const paymentService = {
       throw new AppError(400, 'Cannot pay for a completed booking');
     }
 
-    // Razorpay expects amount in smallest currency unit (paise for INR)
-    const amountInPaise = Math.round(booking.totalAmount * 100);
+    const amountInPaise = Math.round(Number(booking.totalAmount) * 100);
 
     const options = {
-      amount: amountInPaise,
+      amount:  amountInPaise,
       currency: 'INR',
-      receipt: `receipt_${booking._id.toString().slice(-10)}`,
+      receipt:  `receipt_${booking.id.slice(-10)}`,
       notes: {
-        bookingId: booking._id.toString(),
-        userId: userId.toString(),
+        bookingId: booking.id,
+        userId,
       },
     };
 
@@ -54,42 +57,39 @@ export const paymentService = {
 
     const order = await razorpay.orders.create(options);
 
-    // Upsert payment record — avoids E11000 duplicate key if user retries
-    const payment = await Payment.findOneAndUpdate(
-      { booking: booking._id },
-      {
-        $set: {
-          user: userId,
-          razorpayOrderId: order.id,
-          paymentProvider: 'razorpay',
-          amount: booking.totalAmount,
-          currency: 'INR',
-          status: 'pending',
-        },
+    // Upsert payment record — avoids duplicate key if user retries
+    const payment = await prisma.payment.upsert({
+      where:  { bookingId },
+      update: {
+        razorpayOrderId: order.id,
+        status:          PaymentRecordStatus.pending,
+        amount:          Number(booking.totalAmount),
+        currency:        'INR',
+        userId,
       },
-      { upsert: true, new: true }
-    );
-
-    // Link payment to booking
-    if (!booking.payment) {
-      booking.payment = payment._id;
-      await booking.save();
-    }
+      create: {
+        bookingId,
+        userId,
+        razorpayOrderId: order.id,
+        amount:          Number(booking.totalAmount),
+        currency:        'INR',
+        status:          PaymentRecordStatus.pending,
+      },
+    });
 
     return {
       order_id: order.id,
-      amount: order.amount,
+      amount:   order.amount,
       currency: order.currency,
-      // In production, this key would be the LIVE key_id
-      key: process.env.RAZORPAY_KEY_ID,
+      key:      process.env.RAZORPAY_KEY_ID,
       booking: {
-        _id: booking._id,
-        car: booking.car,
-        startDate: booking.startDate,
-        endDate: booking.endDate,
-        totalDays: booking.totalDays,
-        totalAmount: booking.totalAmount,
-        dailyRateAtBooking: booking.dailyRateAtBooking,
+        id:                booking.id,
+        car:               booking.car,
+        startDate:         booking.startDate,
+        endDate:           booking.endDate,
+        totalDays:         booking.totalDays,
+        totalAmount:       Number(booking.totalAmount),
+        dailyRateAtBooking: Number(booking.dailyRateAtBooking),
       },
     };
   },
@@ -101,11 +101,8 @@ export const paymentService = {
     razorpay_signature: string,
     userId: string
   ) {
-    // Step 1: Verify HMAC signature (never trust the frontend)
-    //   signature = HMAC_SHA256(order_id + "|" + payment_id, key_secret)
-    //   In production, RAZORPAY_KEY_SECRET would be the live secret.
+    // Step 1: Verify HMAC signature
     const body = razorpay_order_id + '|' + razorpay_payment_id;
-
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
       .update(body)
@@ -113,146 +110,191 @@ export const paymentService = {
 
     if (expectedSignature !== razorpay_signature) {
       logger.warn(`Payment signature mismatch for order ${razorpay_order_id}`);
-      // Find the payment first, then update both records atomically
-      const failedPayment = await Payment.findOneAndUpdate(
-        { razorpayOrderId: razorpay_order_id },
-        { $set: { status: 'failed' } },
-        { new: true }
-      );
+
+      // Mark payment + booking as failed atomically
+      const failedPayment = await prisma.payment.findUnique({
+        where: { razorpayOrderId: razorpay_order_id },
+      });
       if (failedPayment) {
-        await Booking.findByIdAndUpdate(
-          failedPayment.booking,
-          { $set: { paymentStatus: 'failed' } }
-        );
+        await prisma.$transaction([
+          prisma.payment.update({
+            where: { id: failedPayment.id },
+            data:  { status: PaymentRecordStatus.failed },
+          }),
+          prisma.booking.update({
+            where: { id: failedPayment.bookingId },
+            data:  { paymentStatus: 'failed' },
+          }),
+        ]);
       }
+
       throw new AppError(400, 'Invalid payment signature — payment marked as failed');
     }
 
-    // Step 2: Find the payment record
-    const payment = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
+    // Step 2: Find payment record
+    const payment = await prisma.payment.findUnique({
+      where: { razorpayOrderId: razorpay_order_id },
+    });
     if (!payment) throw new AppError(404, 'Payment record not found for this order');
-    if (payment.user.toString() !== userId) throw new AppError(403, 'Not authorized');
+    if (payment.userId !== userId) throw new AppError(403, 'Not authorized');
 
-    // Step 3: Update payment record
-    payment.status = 'succeeded';
-    payment.razorpayPaymentId = razorpay_payment_id;
-    payment.razorpaySignature = razorpay_signature;
-    payment.paidAt = new Date();
-    await payment.save();
-
-    // Step 4: Update booking — mark as confirmed & paid
-    const booking = await Booking.findById(payment.booking);
-    if (booking) {
-      booking.status = 'confirmed';
-      booking.paymentStatus = 'paid';
-      booking.payment = payment._id;
-      await booking.save();
-    }
+    // Step 3 & 4: Update payment + booking + car atomically
+    const { updatedPayment, updatedBooking } = await prisma.$transaction(async (tx) => {
+      const [p, b] = await Promise.all([
+        tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status:             PaymentRecordStatus.succeeded,
+            razorpayPaymentId:  razorpay_payment_id,
+            razorpaySignature:  razorpay_signature,
+            paidAt:             new Date(),
+          },
+        }),
+        tx.booking.update({
+          where: { id: payment.bookingId },
+          data: { status: BookingStatus.confirmed, paymentStatus: 'paid' },
+        }),
+      ]);
+      // Mark car as rented — prevents double-booking while rental is active
+      await tx.car.update({ where: { id: b.carId }, data: { status: CarStatus.rented } });
+      return { updatedPayment: p, updatedBooking: b };
+    });
 
     logger.info(`Payment verified: order=${razorpay_order_id}, payment=${razorpay_payment_id}`);
 
     return {
-      success: true,
-      paymentId: payment._id,
-      bookingId: booking?._id,
-      amount: payment.amount,
+      success:       true,
+      paymentId:     updatedPayment.id,
+      bookingId:     updatedBooking.id,
+      amount:        Number(updatedPayment.amount),
       transactionId: razorpay_payment_id,
     };
   },
 
   // ─── Get Single Payment ───────────────────────────────────────────────────
   async getPaymentById(paymentId: string, userId: string) {
-    const payment = await Payment.findById(paymentId)
-      .populate({
-        path: 'booking',
-        select: 'startDate endDate totalAmount totalDays dailyRateAtBooking status paymentStatus car',
-        populate: {
-          path: 'car',
-          select: 'make carModel year images category location',
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        booking: {
+          select: {
+            id: true, startDate: true, endDate: true, totalAmount: true,
+            totalDays: true, dailyRateAtBooking: true, status: true, paymentStatus: true,
+            car: {
+              select: {
+                id: true, make: true, carModel: true, year: true,
+                images: true, category: true,
+                locationAddress: true, locationLat: true, locationLng: true,
+              },
+            },
+          },
         },
-      })
-      .lean();
+      },
+    });
 
     if (!payment) throw new AppError(404, 'Payment not found');
-    if (payment.user.toString() !== userId) throw new AppError(403, 'Not authorized');
+    if (payment.userId !== userId) throw new AppError(403, 'Not authorized');
 
     return payment;
   },
 
   // ─── Payment History ──────────────────────────────────────────────────────
   async getPaymentHistory(userId: string) {
-    return await Payment.find({ user: userId })
-      .populate({
-        path: 'booking',
-        select: 'startDate endDate totalAmount totalDays dailyRateAtBooking status paymentStatus car',
-        populate: {
-          path: 'car',
-          select: 'make carModel year images',
+    return await prisma.payment.findMany({
+      where: { userId },
+      include: {
+        booking: {
+          select: {
+            id: true, startDate: true, endDate: true, totalAmount: true,
+            totalDays: true, dailyRateAtBooking: true, status: true, paymentStatus: true,
+            car: {
+              select: { id: true, make: true, carModel: true, year: true, images: true },
+            },
+          },
         },
-      })
-      .sort({ createdAt: -1 })
-      .lean();
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   },
 
   // ─── Get Payment by Booking ID ────────────────────────────────────────────
   async getPaymentByBookingId(bookingId: string, userId: string) {
-    const payment = await Payment.findOne({ booking: bookingId })
-      .populate({
-        path: 'booking',
-        select: 'startDate endDate totalAmount totalDays dailyRateAtBooking status paymentStatus car',
-        populate: {
-          path: 'car',
-          select: 'make carModel year images category location',
+    const payment = await prisma.payment.findUnique({
+      where: { bookingId },
+      include: {
+        booking: {
+          select: {
+            id: true, startDate: true, endDate: true, totalAmount: true,
+            totalDays: true, dailyRateAtBooking: true, status: true, paymentStatus: true,
+            car: {
+              select: {
+                id: true, make: true, carModel: true, year: true,
+                images: true, category: true,
+                locationAddress: true, locationLat: true, locationLng: true,
+              },
+            },
+          },
         },
-      })
-      .lean();
+      },
+    });
 
     if (!payment) return null;
-    if (payment.user.toString() !== userId) throw new AppError(403, 'Not authorized');
+    if (payment.userId !== userId) throw new AppError(403, 'Not authorized');
 
     return payment;
   },
 
   // ─── Demo Capture (no gateway, dev/portfolio only) ────────────────────────
   async demoCapture(bookingId: string, userId: string) {
-    const booking = await Booking.findById(bookingId);
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking) throw new AppError(404, 'Booking not found');
-    if (booking.user.toString() !== userId) throw new AppError(403, 'Not authorized');
+    if (booking.userId !== userId) throw new AppError(403, 'Not authorized');
     if (booking.paymentStatus === 'paid') throw new AppError(400, 'Already paid');
     if (booking.status === 'cancelled') throw new AppError(400, 'Booking is cancelled');
 
-    // Create or update a payment record marked as succeeded
     const demoPaymentId = `demo_${Date.now()}`;
-    const payment = await Payment.findOneAndUpdate(
-      { booking: booking._id },
-      {
-        $set: {
-          user: userId,
-          razorpayOrderId: `demo_order_${bookingId}`,
-          razorpayPaymentId: demoPaymentId,
-          paymentProvider: 'razorpay',
-          amount: booking.totalAmount,
-          currency: 'INR',
-          status: 'succeeded',
-          paidAt: new Date(),
-        },
-      },
-      { upsert: true, new: true }
-    );
 
-    // Mark booking confirmed
-    booking.status = 'confirmed';
-    booking.paymentStatus = 'paid';
-    booking.payment = payment._id;
-    await booking.save();
+    const { payment, updatedBooking } = await prisma.$transaction(async (tx) => {
+      const [p, b] = await Promise.all([
+        tx.payment.upsert({
+          where:  { bookingId },
+          update: {
+            razorpayOrderId:   `demo_order_${bookingId}`,
+            razorpayPaymentId: demoPaymentId,
+            status:            PaymentRecordStatus.succeeded,
+            paidAt:            new Date(),
+            amount:            Number(booking.totalAmount),
+            currency:          'INR',
+            userId,
+          },
+          create: {
+            bookingId,
+            userId,
+            razorpayOrderId:   `demo_order_${bookingId}`,
+            razorpayPaymentId: demoPaymentId,
+            amount:            Number(booking.totalAmount),
+            currency:          'INR',
+            status:            PaymentRecordStatus.succeeded,
+            paidAt:            new Date(),
+          },
+        }),
+        tx.booking.update({
+          where: { id: bookingId },
+          data:  { status: BookingStatus.confirmed, paymentStatus: 'paid' },
+        }),
+      ]);
+      // Mark car as rented (demo mode — same status as real payment flow)
+      await tx.car.update({ where: { id: b.carId }, data: { status: CarStatus.rented } });
+      return { payment: p, updatedBooking: b };
+    });
 
     logger.info(`Demo payment captured for booking ${bookingId} (no gateway)`);
 
     return {
-      success: true,
-      paymentId: payment._id,
-      bookingId: booking._id,
-      amount: booking.totalAmount,
+      success:       true,
+      paymentId:     payment.id,
+      bookingId:     updatedBooking.id,
+      amount:        Number(updatedBooking.totalAmount),
       transactionId: demoPaymentId,
     };
   },

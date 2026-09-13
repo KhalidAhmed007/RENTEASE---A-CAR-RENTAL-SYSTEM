@@ -29,7 +29,7 @@ export function CarCard({ car, index = 0 }: CarCardProps) {
 
   // FIX: Track both loading state and error state.
   // imgError is ONLY set to true when the actual network request fails (onError).
-  // It is NOT reset by re-renders because CarCard uses key={car._id} in parent,
+  // It is NOT reset by re-renders because CarCard uses key={car.id} in parent,
   // which means this component instance is stable for the lifetime of that car.
   const [imgLoading, setImgLoading] = useState(true);
   const [imgError, setImgError] = useState(false);
@@ -154,10 +154,10 @@ export function CarCard({ car, index = 0 }: CarCardProps) {
         </div>
 
         {/* Location */}
-        {car.location?.address && (
+        {car.locationAddress && (
           <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mb-4 mt-2">
             <MapPin className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-            <span className="truncate">{car.location.address}</span>
+            <span className="truncate">{car.locationAddress}</span>
           </div>
         )}
 
@@ -188,13 +188,13 @@ export function CarCard({ car, index = 0 }: CarCardProps) {
 
           <div className="grid grid-cols-2 gap-2 mt-1">
             <Link
-              href={`/cars/${car._id}`}
+              href={`/cars/${car.id}`}
               className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
               View Details
             </Link>
             <Link
-              href={`/dashboard/bookings/new?carId=${car._id}`}
+              href={`/dashboard/bookings/new?carId=${car.id}`}
               className={cn(
                 'inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors',
                 isAvailable

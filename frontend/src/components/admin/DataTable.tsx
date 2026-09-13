@@ -18,7 +18,7 @@ interface DataTableProps<T> {
   searchKey?: keyof T;
 }
 
-export function DataTable<T extends { _id: string }>({ data, columns, title, searchKey }: DataTableProps<T>) {
+export function DataTable<T extends { id: string }>({ data, columns, title, searchKey }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   
   const filteredData = data.filter(item => {
@@ -68,7 +68,7 @@ export function DataTable<T extends { _id: string }>({ data, columns, title, sea
               </tr>
             ) : (
               filteredData.map((item) => (
-                <tr key={item._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   {columns.map((col) => (
                     <td key={String(col.key)} className="px-6 py-4 whitespace-nowrap">
                       {col.render ? col.render(item[col.key], item) : String(item[col.key])}

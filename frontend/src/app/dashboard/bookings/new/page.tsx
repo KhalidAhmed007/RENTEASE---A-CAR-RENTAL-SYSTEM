@@ -88,9 +88,9 @@ function BookingFlow() {
     }
     carApi.getCarById(carId).then(data => {
       setCar(data);
-      if (data.location?.address) {
-        setValue('pickupLocation', data.location.address);
-        setValue('dropLocation', data.location.address);
+      if (data.locationAddress) {
+        setValue('pickupLocation', data.locationAddress);
+        setValue('dropLocation', data.locationAddress);
       }
       setIsLoadingCar(false);
     }).catch(() => {
@@ -113,12 +113,12 @@ function BookingFlow() {
     setError('');
     try {
       const bookingResp = await bookingApi.createBooking({
-        carId: car._id,
+        carId: car.id,
         startDate: data.startDate,
         endDate: data.endDate,
       });
       // Mark the payment as captured without going through the gateway
-      await paymentApi.demoCapture(bookingResp.data._id);
+      await paymentApi.demoCapture(bookingResp.data.id);
       setSuccessModalOpen(true);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -144,13 +144,13 @@ function BookingFlow() {
 
       // 1. Create booking (Note: backend doesn't store locations/notes currently, but we validate them here)
       const bookingResp = await bookingApi.createBooking({
-        carId: car._id,
+        carId: car.id,
         startDate: data.startDate,
         endDate: data.endDate,
       });
 
       // 2. Create Razorpay order
-      const orderData = await paymentApi.createOrder(bookingResp.data._id);
+      const orderData = await paymentApi.createOrder(bookingResp.data.id);
 
       // 3. Open Razorpay checkout
       const options = {
@@ -181,6 +181,7 @@ function BookingFlow() {
         },
         modal: {
           ondismiss: function() {
+            setIsSubmitting(false);
             setError('Payment cancelled. Please try again.');
           }
         }
@@ -221,7 +222,7 @@ function BookingFlow() {
 
   return (
     <div className="max-w-5xl mx-auto pb-12">
-      <Link href={`/cars/${car._id}`} className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-6 transition-colors">
+      <Link href={`/cars/${car.id}`} className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-6 transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back to car details
       </Link>
 

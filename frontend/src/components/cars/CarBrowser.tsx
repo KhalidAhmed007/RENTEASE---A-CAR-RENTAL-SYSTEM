@@ -158,7 +158,7 @@ export function CarBrowser() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {cars.map((car, i) => (
-                  <CarCard key={car._id} car={car} index={i} />
+                  <CarCard key={car.id} car={car} index={i} />
                 ))}
               </div>
             )}

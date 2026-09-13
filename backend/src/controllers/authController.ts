@@ -7,18 +7,19 @@ import { env } from '../config/env';
 import { AppError } from '../middlewares/errorMiddleware';
 
 const sendTokenResponse = (user: any, statusCode: number, res: Response, message: string) => {
-  const accessToken = jwtHelper.generateAccessToken(user._id, user.role);
-  const refreshToken = jwtHelper.generateRefreshToken(user._id, user.role);
+  // user.id is a UUID string (Prisma), not a Mongoose ObjectId
+  const accessToken  = jwtHelper.generateAccessToken(user.id, user.role);
+  const refreshToken = jwtHelper.generateRefreshToken(user.id, user.role);
 
-  // SameSite=Lax works in all cases now because the Next.js rewrite on Vercel
+  // SameSite=Lax works in all cases because the Next.js rewrite on Vercel
   // proxies /api/v1/* server-side — the browser only ever talks to the Vercel
   // domain, so cookies are always same-site (never cross-domain).
   const isProd = env.nodeEnv === 'production';
   const cookieOptions = {
     httpOnly: true,
-    secure: isProd,
+    secure:   isProd,
     sameSite: 'lax' as const,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days
   };
 
   res.status(statusCode)
@@ -26,18 +27,19 @@ const sendTokenResponse = (user: any, statusCode: number, res: Response, message
     .json(
       new ApiResponse(statusCode, {
         user: {
-          id: user._id,
+          id:        user.id,
           firstName: user.firstName,
-          email: user.email,
-          role: user.role
+          email:     user.email,
+          role:      user.role,
         },
-        accessToken 
+        accessToken,
       }, message)
     );
 };
 
 export const register = catchAsync(async (req: Request, res: Response) => {
   const user = await authService.register(req.body);
+  // Never expose passwordHash in the response
   res.status(201).json(
     new ApiResponse(201, { email: user.email }, 'Registration successful. Please log in.')
   );
@@ -52,9 +54,9 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 export const logout = catchAsync(async (req: Request, res: Response) => {
   const isProd = env.nodeEnv === 'production';
   res.cookie('refreshToken', 'none', {
-    maxAge: 0,
+    maxAge:   0,
     httpOnly: true,
-    secure: isProd,
+    secure:   isProd,
     sameSite: 'lax' as const,
   });
   res.status(200).json(new ApiResponse(200, null, 'Logged out successfully'));
@@ -70,7 +72,7 @@ export const refresh = catchAsync(async (req: Request, res: Response) => {
   try {
     const decoded = jwtHelper.verifyRefreshToken(refreshToken);
     const newAccessToken = jwtHelper.generateAccessToken(decoded.id, decoded.role);
-    
+
     res.status(200).json(new ApiResponse(200, { accessToken: newAccessToken }, 'Token refreshed'));
   } catch (error) {
     throw new AppError(401, 'Invalid refresh token. Please log in again.');

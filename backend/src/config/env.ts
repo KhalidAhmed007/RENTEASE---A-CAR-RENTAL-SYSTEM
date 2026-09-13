@@ -4,7 +4,7 @@ dotenv.config();
 export const env = {
   port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
-  mongoUri: process.env.MONGO_URI as string,
+  databaseUrl: process.env.DATABASE_URL as string,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET as string,
     refreshSecret: process.env.JWT_REFRESH_SECRET as string,
@@ -15,8 +15,8 @@ export const env = {
 };
 
 // Fail fast on missing critical envs
-if (!env.mongoUri || !env.jwt.accessSecret || !env.jwt.refreshSecret) {
-  console.error('FATAL ERROR: Missing critical environment variables.');
+if (!env.databaseUrl || !env.jwt.accessSecret || !env.jwt.refreshSecret) {
+  console.error('FATAL ERROR: Missing critical environment variables (DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET).');
   process.exit(1);
 }
 

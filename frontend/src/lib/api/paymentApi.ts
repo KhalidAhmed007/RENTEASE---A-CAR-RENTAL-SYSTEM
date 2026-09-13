@@ -1,5 +1,23 @@
 import { api } from './axios';
-import { ApiResponse, RazorpayOrderResponse } from '@/types';
+import { ApiResponse, RazorpayOrderResponse, Payment } from '@/types';
+
+/** Prisma Decimal fields come back as strings over JSON — coerce them to numbers. */
+function normalizePayment(payment: any): Payment {
+  if (!payment) return payment;
+  return {
+    ...payment,
+    amount: Number(payment.amount),
+    booking: payment.booking ? {
+      ...payment.booking,
+      totalAmount: Number(payment.booking.totalAmount),
+      dailyRateAtBooking: Number(payment.booking.dailyRateAtBooking),
+      car: payment.booking.car ? {
+        ...payment.booking.car,
+        dailyRate: Number(payment.booking.car.dailyRate),
+      } : undefined,
+    } : undefined,
+  };
+}
 
 export const paymentApi = {
   createOrder: async (bookingId: string): Promise<RazorpayOrderResponse> => {
@@ -17,8 +35,10 @@ export const paymentApi = {
     return response.data;
   },
 
-  getHistory: async () => {
-    const response = await api.get<ApiResponse<unknown[]>>('/payments/history');
-    return response.data.data;
+  getHistory: async (): Promise<Payment[]> => {
+    const response = await api.get<ApiResponse<Payment[]>>('/payments/history');
+    const data = response.data.data;
+    return Array.isArray(data) ? data.map(normalizePayment) : [];
   }
 };
+

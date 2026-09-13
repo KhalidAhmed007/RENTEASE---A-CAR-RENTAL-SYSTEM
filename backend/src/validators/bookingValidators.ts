@@ -5,7 +5,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 dayjs.extend(isSameOrBefore);
 
 export const createBookingValidation = [
-  body('carId').isMongoId().withMessage('Invalid Car ID'),
+  body('carId').isUUID().withMessage('Invalid Car ID'),
   body('startDate')
     .isISO8601()
     .custom((value: string) => {

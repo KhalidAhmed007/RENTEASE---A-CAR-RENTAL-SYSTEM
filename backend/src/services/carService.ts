@@ -1,5 +1,6 @@
-import Car from '../models/Car';
+import { prisma } from '../config/prisma';
 import { AppError } from '../middlewares/errorMiddleware';
+import { CarStatus } from '@prisma/client';
 
 interface QueryParams {
   page?: number; limit?: number; search?: string;
@@ -7,64 +8,119 @@ interface QueryParams {
 }
 
 export const carService = {
+  // ─── Get All Cars (with filters, pagination, sort) ────────────────────────
   async getAllCars(queryParams: QueryParams) {
-    const { 
-      page = 1, limit = 10, search, category, minPrice, maxPrice, sort 
+    const {
+      page = 1, limit = 10, search, category, minPrice, maxPrice, sort,
     } = queryParams;
 
-    const query: any = { status: { $ne: 'retired' } };
+    const where: any = {
+      status: CarStatus.available,
+    };
 
-    if (category) query.category = category;
+    if (category) where.category = category;
+
     if (minPrice || maxPrice) {
-      query.dailyRate = {};
-      if (minPrice) query.dailyRate.$gte = Number(minPrice);
-      if (maxPrice) query.dailyRate.$lte = Number(maxPrice);
+      where.dailyRate = {};
+      if (minPrice) where.dailyRate.gte = Number(minPrice);
+      if (maxPrice) where.dailyRate.lte = Number(maxPrice);
     }
 
     if (search) {
-      query.$or = [
-        { make: { $regex: search, $options: 'i' } },
-        { carModel: { $regex: search, $options: 'i' } }
+      where.OR = [
+        { make:     { contains: search, mode: 'insensitive' } },
+        { carModel: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    let sortObj: any = { createdAt: -1 };
-    if (sort === 'priceAsc') sortObj = { dailyRate: 1 };
-    if (sort === 'priceDesc') sortObj = { dailyRate: -1 };
-    if (sort === 'rating') sortObj = { averageRating: -1 };
+    let orderBy: any = { createdAt: 'desc' };
+    if (sort === 'priceAsc')  orderBy = { dailyRate: 'asc' };
+    if (sort === 'priceDesc') orderBy = { dailyRate: 'desc' };
+    if (sort === 'rating')    orderBy = { averageRating: 'desc' };
 
     const skip = (Number(page) - 1) * Number(limit);
+
     const [cars, totalCount] = await Promise.all([
-      Car.find(query).sort(sortObj).skip(skip).limit(Number(limit)).lean(),
-      Car.countDocuments(query)
+      prisma.car.findMany({ where, orderBy, skip, take: Number(limit) }),
+      prisma.car.count({ where }),
     ]);
 
     return {
       cars,
-      pagination: { total: totalCount, page: Number(page), limit: Number(limit), totalPages: Math.ceil(totalCount / Number(limit)) }
+      pagination: {
+        total: totalCount,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(totalCount / Number(limit)),
+      },
     };
   },
 
+  // ─── Get Car by ID ────────────────────────────────────────────────────────
   async getCarById(carId: string) {
-    const car = await Car.findById(carId).lean();
+    const car = await prisma.car.findUnique({ where: { id: carId } });
     if (!car || car.status === 'retired') throw new AppError(404, 'Car not found');
     return car;
   },
 
+  // ─── Create Car ───────────────────────────────────────────────────────────
   async createCar(carData: any, imageUrls: string[]) {
-    carData.images = imageUrls;
-    return await Car.create(carData);
+    const location = carData.location || {};
+    const [locationLng, locationLat] = location.coordinates || [null, null];
+
+    // Only allow valid initial statuses — never let API set 'rented' or 'retired' on creation
+    const allowedStatuses = ['available', 'maintenance'];
+    const status = allowedStatuses.includes(carData.status) ? carData.status : 'available';
+
+    return await prisma.car.create({
+      data: {
+        make:               carData.make,
+        carModel:           carData.carModel,
+        year:               Number(carData.year),
+        registrationNumber: carData.registrationNumber,
+        category:           carData.category,
+        dailyRate:          Number(carData.dailyRate),
+        status,
+        locationLat:        locationLat ? Number(locationLat) : null,
+        locationLng:        locationLng ? Number(locationLng) : null,
+        locationAddress:    location.address || carData.locationAddress || '',
+        features:           Array.isArray(carData.features) ? carData.features : [],
+        images:             imageUrls,
+      },
+    });
   },
 
+  // ─── Update Car ───────────────────────────────────────────────────────────
   async updateCar(carId: string, updateData: any) {
-    const car = await Car.findByIdAndUpdate(carId, updateData, { new: true, runValidators: true });
-    if (!car) throw new AppError(404, 'Car not found');
-    return car;
+    const data: any = { ...updateData };
+    // Strip fields that must never be set via API
+    delete data.id;
+    delete data.createdAt;
+    delete data.updatedAt;
+
+    if (updateData.location) {
+      const [lng, lat] = updateData.location.coordinates || [null, null];
+      data.locationLat     = lat ? Number(lat) : undefined;
+      data.locationLng     = lng ? Number(lng) : undefined;
+      data.locationAddress = updateData.location.address;
+      delete data.location;
+    }
+
+    try {
+      return await prisma.car.update({ where: { id: carId }, data });
+    } catch (e: any) {
+      if (e?.code === 'P2025') throw new AppError(404, 'Car not found');
+      throw e;
+    }
   },
 
+  // ─── Delete Car (soft-delete: mark as retired) ────────────────────────────
   async deleteCar(carId: string) {
-    const car = await Car.findByIdAndUpdate(carId, { status: 'retired' }, { new: true });
-    if (!car) throw new AppError(404, 'Car not found');
-    return car;
-  }
+    try {
+      return await prisma.car.update({ where: { id: carId }, data: { status: CarStatus.retired } });
+    } catch (e: any) {
+      if (e?.code === 'P2025') throw new AppError(404, 'Car not found');
+      throw e;
+    }
+  },
 };

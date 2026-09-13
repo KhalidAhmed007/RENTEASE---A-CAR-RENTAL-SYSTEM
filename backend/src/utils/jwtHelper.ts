@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { Types } from 'mongoose';
 
 export interface TokenPayload {
   id: string;
@@ -8,17 +7,17 @@ export interface TokenPayload {
 }
 
 export const jwtHelper = {
-  generateAccessToken(userId: Types.ObjectId | string, role: string): string {
+  generateAccessToken(userId: string, role: string): string {
     return jwt.sign(
-      { id: userId.toString(), role },
+      { id: userId, role },
       env.jwt.accessSecret,
       { expiresIn: env.jwt.accessExpiration as jwt.SignOptions['expiresIn'] }
     );
   },
 
-  generateRefreshToken(userId: Types.ObjectId | string, role: string): string {
+  generateRefreshToken(userId: string, role: string): string {
     return jwt.sign(
-      { id: userId.toString(), role },
+      { id: userId, role },
       env.jwt.refreshSecret,
       { expiresIn: env.jwt.refreshExpiration as jwt.SignOptions['expiresIn'] }
     );
@@ -30,5 +29,5 @@ export const jwtHelper = {
 
   verifyRefreshToken(token: string): TokenPayload {
     return jwt.verify(token, env.jwt.refreshSecret) as TokenPayload;
-  }
+  },
 };

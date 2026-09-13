@@ -36,9 +36,9 @@ export function useCars(initialFilters: CarFilters = {}) {
 
       setCars(prev => {
         if (!append) return data.cars;
-        // Deduplicate by _id to prevent duplicate cards on re-renders.
-        const existingIds = new Set(prev.map(c => c._id));
-        const uniqueNewCars = data.cars.filter((c: Car) => !existingIds.has(c._id));
+        // Deduplicate by id to prevent duplicate cards on re-renders.
+        const existingIds = new Set(prev.map(c => c.id));
+        const uniqueNewCars = data.cars.filter((c: Car) => !existingIds.has(c.id));
         return [...prev, ...uniqueNewCars];
       });
       setPagination(data.pagination);

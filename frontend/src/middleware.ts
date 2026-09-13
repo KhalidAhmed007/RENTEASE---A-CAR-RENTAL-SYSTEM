@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * ─── Next.js 16 Proxy (Edge Middleware) ──────────────────────────────────────
+ * ─── Next.js Edge Middleware ─────────────────────────────────────────────────
  *
  * WHY WE DON'T DO AUTH REDIRECTS HERE:
  *
@@ -18,11 +18,11 @@ import type { NextRequest } from 'next/server';
  *  - Client-side: DashboardLayout (redirects logged-out users to /login)
  *  - Both use Zustand authStore + _hasHydrated to prevent flash of wrong content.
  *
- * This proxy is kept for future use (e.g., geolocation headers, A/B tests, etc.)
+ * Middleware is kept for future use (e.g., geolocation headers, A/B tests, etc.)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export function proxy(_request: NextRequest) {
+export function middleware(_request: NextRequest) {
   return NextResponse.next();
 }
 
@@ -30,4 +30,3 @@ export function proxy(_request: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 };
-

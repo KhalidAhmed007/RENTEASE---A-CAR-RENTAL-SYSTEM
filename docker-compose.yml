@@ -1,0 +1,25 @@
+services:
+
+  backend:
+    build:
+      context: ./backend
+    image: rentease-backend:dev
+    container_name: rentease-backend
+    env_file:
+      - ./backend/.env.docker
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://backend:5000
+    image: rentease-frontend:dev
+    container_name: rentease-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped

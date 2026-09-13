@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!car) return { title: 'Car Not Found' };
   return {
     title: `${car.make} ${car.carModel} (${car.year}) | RentEase`,
-    description: `Rent the ${car.make} ${car.carModel} for ₹${car.dailyRate?.toLocaleString('en-IN')}/day. ${car.location?.address || ''}`,
+    description: `Rent the ${car.make} ${car.carModel} for ₹${car.dailyRate?.toLocaleString('en-IN')}/day. ${car.locationAddress || ''}`,
   };
 }
 
@@ -127,7 +127,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
               </div>
 
               <Link
-                href={`/dashboard/bookings/new?carId=${car._id}`}
+                href={`/dashboard/bookings/new?carId=${car.id}`}
                 className={`w-full flex items-center justify-center py-4 rounded-xl text-base font-bold transition-all ${
                   isAvailable
                     ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-0.5'
@@ -195,7 +195,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
             </section>
 
             {/* Location Section */}
-            {car.location?.address && (
+            {car.locationAddress && (
               <section>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Pickup Location</h2>
                 <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex items-start gap-4">
@@ -204,7 +204,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
                   </div>
                   <div>
                     <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Rental Hub</h4>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{car.location.address}</p>
+                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{car.locationAddress}</p>
                     <button className="mt-3 text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
                       View on Map &rarr;
                     </button>

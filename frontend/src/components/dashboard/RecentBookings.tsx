@@ -87,7 +87,7 @@ function BookingRow({ booking, index }: { booking: Booking; index: number }) {
       {/* Actions */}
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
         <Link
-          href={`/dashboard/bookings/${booking._id}`}
+          href={`/dashboard/bookings/${booking.id}`}
           className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
           aria-label="View booking details"
           title="View Details"
@@ -96,7 +96,7 @@ function BookingRow({ booking, index }: { booking: Booking; index: number }) {
         </Link>
         {booking.status === 'completed' && (
           <Link
-            href={`/cars/${typeof car === 'string' ? car : car?._id}`}
+            href={`/cars/${typeof car === 'string' ? car : car?.id}`}
             className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
             aria-label="Rebook this car"
             title="Rebook"
@@ -132,7 +132,7 @@ export function RecentBookings({ bookings }: RecentBookingsProps) {
   return (
     <div role="table" aria-label="Recent bookings">
       {bookings.map((booking, i) => (
-        <BookingRow key={booking._id} booking={booking} index={i} />
+        <BookingRow key={booking.id} booking={booking} index={i} />
       ))}
       <div className="pt-4">
         <Link

@@ -1,77 +1,74 @@
-import mongoose from 'mongoose';
-import Booking from '../models/Booking';
-import Car from '../models/Car';
-import Payment from '../models/Payment';
+import { prisma } from '../config/prisma';
 import { AppError } from '../middlewares/errorMiddleware';
 import dayjs from 'dayjs';
+import { BookingStatus, CarStatus, PaymentRecordStatus } from '@prisma/client';
 
 export const bookingService = {
+  // ─── Create Booking (atomic transaction) ─────────────────────────────────
   async createBooking(userId: string, carId: string, startDate: Date, endDate: Date) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-      const car = await Car.findById(carId).session(session);
+    return await prisma.$transaction(async (tx) => {
+      // 1. Verify car exists and is available
+      const car = await tx.car.findUnique({ where: { id: carId } });
       if (!car || car.status !== 'available') {
         throw new AppError(400, 'Car is not available for booking');
       }
 
-      const overlappingBooking = await Booking.findOne({
-        car: carId,
-        status: { $in: ['pending', 'confirmed', 'active'] },
-        $or: [
-          { startDate: { $lt: endDate }, endDate: { $gt: startDate } }
-        ]
-      }).session(session);
+      // 2. Check for date conflicts
+      const overlapping = await tx.booking.findFirst({
+        where: {
+          carId,
+          status: { in: ['pending', 'confirmed', 'active'] },
+          startDate: { lt: endDate },
+          endDate:   { gt: startDate },
+        },
+      });
 
-      if (overlappingBooking) {
+      if (overlapping) {
         throw new AppError(409, 'Car is already booked for these dates');
       }
 
+      // 3. Calculate totals
       const start = dayjs(startDate);
-      const end = dayjs(endDate);
-      const totalDays = end.diff(start, 'day') || 1;
-      const totalAmount = totalDays * car.dailyRate;
+      const end   = dayjs(endDate);
+      const totalDays   = end.diff(start, 'day') || 1;
+      const dailyRate   = Number(car.dailyRate);
+      const totalAmount = totalDays * dailyRate;
 
-      const booking = await Booking.create([{
-        user: userId,
-        car: carId,
-        startDate,
-        endDate,
-        totalDays,
-        dailyRateAtBooking: car.dailyRate,
-        totalAmount,
-        status: 'pending'
-      }], { session });
+      // 4. Create booking
+      const booking = await tx.booking.create({
+        data: {
+          userId,
+          carId,
+          startDate,
+          endDate,
+          totalDays,
+          dailyRateAtBooking: dailyRate,
+          totalAmount,
+          status: BookingStatus.pending,
+        },
+      });
 
-      const payment = await Payment.create([{
-        booking: booking[0]._id,
-        user: userId,
-        paymentProvider: 'razorpay',
-        amount: totalAmount,
-        currency: 'INR',
-        status: 'pending'
-      }], { session });
+      // 5. Create payment record linked to booking
+      await tx.payment.create({
+        data: {
+          bookingId: booking.id,
+          userId,
+          amount:   totalAmount,
+          currency: 'INR',
+          status:   PaymentRecordStatus.pending,
+        },
+      });
 
-      booking[0].payment = payment[0]._id;
-      await booking[0].save({ session });
-
-      await session.commitTransaction();
-      return booking[0];
-
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
+      return booking;
+    });
   },
 
+  // ─── Cancel Booking ───────────────────────────────────────────────────────
   async cancelBooking(bookingId: string, userId: string, role: string) {
-    const booking = await Booking.findById(bookingId);
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking) throw new AppError(404, 'Booking not found');
 
-    if (booking.user.toString() !== userId && role !== 'admin') {
+    if (booking.userId !== userId && role !== 'admin') {
       throw new AppError(403, 'Not authorized to cancel this booking');
     }
 
@@ -82,71 +79,102 @@ export const bookingService = {
     let refundStatus = 'none';
     if (booking.status === 'confirmed') {
       const daysUntilStart = dayjs(booking.startDate).diff(dayjs(), 'day');
-      if (daysUntilStart >= 2) {
-        refundStatus = 'full_refund_queued';
-      } else {
-        refundStatus = 'partial_refund_queued';
-      }
+      refundStatus = daysUntilStart >= 2 ? 'full_refund_queued' : 'partial_refund_queued';
     }
 
-    booking.status = 'cancelled';
-    booking.cancellationReason = 'User requested cancellation';
-    await booking.save();
+    const [updatedBooking] = await prisma.$transaction([
+      prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.cancelled,
+          cancellationReason: 'User requested cancellation',
+        },
+      }),
+      prisma.payment.updateMany({
+        where: { bookingId },
+        data:  { status: PaymentRecordStatus.refunded },
+      }),
+      // Restore car to available so it can be rebooked
+      prisma.car.update({
+        where: { id: booking.carId },
+        data:  { status: CarStatus.available },
+      }),
+    ]);
 
-    // Update the linked payment to reflect the cancellation
-    if (booking.payment) {
-      await Payment.findByIdAndUpdate(booking.payment, { $set: { status: 'refunded' } });
-    }
-
-    return { booking, refundStatus };
+    return { booking: updatedBooking, refundStatus };
   },
 
+  // ─── Get My Bookings (paginated) ──────────────────────────────────────────
   async getMyBookings(userId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
 
     const [bookings, total] = await Promise.all([
-      Booking.find({ user: userId })
-        .populate('car', 'make carModel year images category location')
-        .populate('payment', 'status amount')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Booking.countDocuments({ user: userId })
+      prisma.booking.findMany({
+        where: { userId },
+        include: {
+          car: {
+            select: {
+              id: true, make: true, carModel: true, year: true,
+              images: true, category: true,
+              locationAddress: true, locationLat: true, locationLng: true,
+            },
+          },
+          payment: {
+            select: { id: true, status: true, amount: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.booking.count({ where: { userId } }),
     ]);
 
     return {
       bookings,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   },
 
+  // ─── Get Single Booking ───────────────────────────────────────────────────
   async getBookingById(bookingId: string, userId: string, role: string) {
-    const booking = await Booking.findById(bookingId)
-      .populate('car', 'make carModel year images category dailyRate location')
-      .populate('payment', 'status amount razorpayPaymentId razorpayOrderId paidAt currency')
-      .lean();
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        car: {
+          select: {
+            id: true, make: true, carModel: true, year: true,
+            images: true, category: true, dailyRate: true,
+            locationAddress: true, locationLat: true, locationLng: true,
+          },
+        },
+        payment: {
+          select: {
+            id: true, status: true, amount: true,
+            razorpayPaymentId: true, razorpayOrderId: true,
+            paidAt: true, currency: true,
+          },
+        },
+      },
+    });
 
     if (!booking) throw new AppError(404, 'Booking not found');
 
-    // Only allow the owner or admin to view the booking
-    if (booking.user.toString() !== userId && role !== 'admin') {
+    if (booking.userId !== userId && role !== 'admin') {
       throw new AppError(403, 'Not authorized to view this booking');
     }
 
     return booking;
   },
 
+  // ─── Clear Booking History ────────────────────────────────────────────────
   async clearBookingHistory(userId: string) {
-    const result = await Booking.deleteMany({
-      user: userId,
-      status: { $in: ['completed', 'cancelled'] }
+    const result = await prisma.booking.deleteMany({
+      where: {
+        userId,
+        status: { in: ['completed', 'cancelled'] },
+      },
     });
     return result;
-  }
+  },
 };

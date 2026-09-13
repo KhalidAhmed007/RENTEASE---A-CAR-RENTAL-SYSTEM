@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { Car, Payment } from '@/types';
 import { motion } from 'framer-motion';
 import {
   CreditCard, CheckCircle2, XCircle, Clock, RefreshCcw,
-  Loader2, AlertCircle, Receipt, ArrowRight, Car, Info
+  Loader2, AlertCircle, Receipt, ArrowRight, Car as CarIcon, Info
 } from 'lucide-react';
 import { api } from '@/lib/api/axios';
 import { paymentApi } from '@/lib/api/paymentApi';
@@ -27,33 +28,33 @@ function loadRazorpayScript(): Promise<boolean> {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface CarInfo {
-  make: string;
-  carModel: string;
-  year: number;
-  images?: string[];
-}
+//interface CarInfo {
+  //make: string;
+  //carModel: string;
+  //year: number;
+  //images?: string[];
+//}
 
-interface BookingInfo {
-  _id: string;
-  startDate: string;
-  endDate: string;
-  totalAmount: number;
-  status: string;
-  car?: CarInfo;
-}
+//interface BookingInfo {
+ // id: string;
+  //startDate: string;
+  //endDate: string;
+  //totalAmount: number;
+  //status: string;
+  //car?: CarInfo;
+//}
 
-interface Payment {
-  _id: string;
-  booking: BookingInfo;
-  transactionId?: string;
-  razorpayPaymentId?: string;
-  paymentProvider: string;
-  amount: number;
-  currency: string;
-  status: 'pending' | 'succeeded' | 'failed' | 'refunded';
-  createdAt: string;
-}
+//interface Payment {
+  //id: string;
+  //booking: BookingInfo;
+  //transactionId?: string;
+  //razorpayPaymentId?: string | null;
+  //paymentProvider?: string;
+  //amount: number;
+  //currency: string;
+  //status: 'pending' | 'succeeded' | 'failed' | 'refunded';
+  //createdAt: string;
+//}
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const statusConfig: Record<string, {
@@ -67,7 +68,7 @@ const statusConfig: Record<string, {
 };
 
 // ─── Helper: format car name ──────────────────────────────────────────────────
-function getCarName(car?: CarInfo): string {
+function getCarName(car?: Car | null): string {
   if (!car) return 'Vehicle';
   const parts = [car.make, car.carModel, car.year].filter(Boolean);
   return parts.length > 0 ? parts.join(' ') : 'Vehicle';
@@ -90,8 +91,8 @@ export default function PaymentsPage() {
 
   const fetchPayments = () => {
     setIsLoading(true);
-    api.get('/payments/history')
-      .then(res => setPayments(res.data.data ?? []))
+    paymentApi.getHistory()
+      .then(data => setPayments(data))
       .catch(e => setError(
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message
         || 'Failed to load payment history.'
@@ -102,8 +103,8 @@ export default function PaymentsPage() {
   useEffect(() => { fetchPayments(); }, []);
 
   const handlePayNow = async (payment: Payment) => {
-    if (!payment.booking?._id) return;
-    setPayingId(payment._id);
+    if (!payment.booking?.id) return;
+    setPayingId(payment.id);
     setError('');
 
     try {
@@ -114,7 +115,7 @@ export default function PaymentsPage() {
         return;
       }
 
-      const orderData = await paymentApi.createOrder(payment.booking._id);
+      const orderData = await paymentApi.createOrder(payment.booking.id);
 
       const options = {
         key: orderData.key,
@@ -135,7 +136,7 @@ export default function PaymentsPage() {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
-            setSuccessId(payment._id);
+            setSuccessId(payment.id);
             fetchPayments();
           } catch {
             setError('Payment verification failed. Please contact support.');
@@ -146,7 +147,7 @@ export default function PaymentsPage() {
           email: user?.email || '',
         },
         notes: {
-          booking_id: payment.booking._id,
+          booking_id: payment.booking.id,
         },
         theme: { color: '#2563eb' },
         modal: {
@@ -270,11 +271,11 @@ export default function PaymentsPage() {
                   const cfg = statusConfig[p.status] ?? statusConfig.pending;
                   const Icon = cfg.icon;
                   const carName = getCarName(p.booking?.car);
-                  const ref = p.razorpayPaymentId || p.transactionId || null;
+                  const ref = p.razorpayPaymentId || null;
 
                   return (
                     <motion.tr
-                      key={p._id}
+                      key={p.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.04 }}
@@ -289,7 +290,7 @@ export default function PaymentsPage() {
                       <td className="px-5 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                            <Car className="h-4 w-4 text-slate-400" />
+                            <CarIcon className="h-4 w-4 text-slate-400" />
                           </div>
                           <span className="font-semibold text-slate-900 dark:text-white">{carName}</span>
                         </div>
@@ -320,11 +321,11 @@ export default function PaymentsPage() {
                             <Button
                               variant="primary"
                               className="text-xs h-8 px-3 w-full"
-                              isLoading={payingId === p._id}
+                              isLoading={payingId === p.id}
                               onClick={() => handlePayNow(p)}
                               aria-label={`Pay now for ${carName}`}
                             >
-                              {payingId === p._id ? 'Opening...' : <>Pay Now <ArrowRight className="h-3 w-3 ml-1 inline" /></>}
+                              {payingId === p.id ? 'Opening...' : <>Pay Now <ArrowRight className="h-3 w-3 ml-1 inline" /></>}
                             </Button>
                           </div>
                         )}

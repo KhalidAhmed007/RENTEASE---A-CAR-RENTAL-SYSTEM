@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { catchAsync } from '../utils/catchAsync';
 import { carService } from '../services/carService';
 import { ApiResponse } from '../utils/ApiResponse';
+import { uploadToCloudinary } from '../config/cloudinary';
 
 export const getCars = catchAsync(async (req: Request, res: Response) => {
   const result = await carService.getAllCars(req.query);
@@ -15,11 +16,9 @@ export const getCarById = catchAsync(async (req: Request, res: Response) => {
 
 export const createCar = catchAsync(async (req: Request, res: Response) => {
   const files = req.files as Express.Multer.File[];
-  const imageUrls = files ? files.map(file => file.path) : [];
-
-  if (typeof req.body.location === 'string') {
-    req.body.location = JSON.parse(req.body.location);
-  }
+  const imageUrls = files && files.length > 0
+    ? await Promise.all(files.map((file) => uploadToCloudinary(file.buffer)))
+    : [];
 
   const newCar = await carService.createCar(req.body, imageUrls);
   res.status(201).json(new ApiResponse(201, newCar, 'Car added successfully'));

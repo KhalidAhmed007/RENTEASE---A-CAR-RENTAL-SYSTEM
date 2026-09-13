@@ -42,25 +42,25 @@ const FLEET_STATS = [
 ];
 
 const MOCK_BOOKINGS = [
-  { _id: 'b1', user: 'John Doe', car: 'Tesla Model 3', status: 'confirmed', amount: '₹12,250', date: '2026-06-15' },
-  { _id: 'b2', user: 'Jane Smith', car: 'BMW X5', status: 'completed', amount: '₹28,400', date: '2026-06-10' },
-  { _id: 'b3', user: 'Alice Johnson', car: 'Audi A4', status: 'pending', amount: '₹9,500', date: '2026-06-18' },
-  { _id: 'b4', user: 'Bob Brown', car: 'Mercedes C-Class', status: 'cancelled', amount: '₹0', date: '2026-06-08' },
-  { _id: 'b5', user: 'Priya Sharma', car: 'Hyundai Creta', status: 'active', amount: '₹7,200', date: '2026-06-12' },
+  { id: 'b1', user: 'John Doe', car: 'Tesla Model 3', status: 'confirmed', amount: '₹12,250', date: '2026-06-15' },
+  { id: 'b2', user: 'Jane Smith', car: 'BMW X5', status: 'completed', amount: '₹28,400', date: '2026-06-10' },
+  { id: 'b3', user: 'Alice Johnson', car: 'Audi A4', status: 'pending', amount: '₹9,500', date: '2026-06-18' },
+  { id: 'b4', user: 'Bob Brown', car: 'Mercedes C-Class', status: 'cancelled', amount: '₹0', date: '2026-06-08' },
+  { id: 'b5', user: 'Priya Sharma', car: 'Hyundai Creta', status: 'active', amount: '₹7,200', date: '2026-06-12' },
 ];
 
 const MOCK_USERS = [
-  { _id: 'u1', name: 'John Doe', email: 'john@example.com', role: 'user', status: 'active' },
-  { _id: 'u2', name: 'Admin User', email: 'admin@rentease.com', role: 'admin', status: 'active' },
-  { _id: 'u3', name: 'Alice Johnson', email: 'alice@example.com', role: 'user', status: 'suspended' },
-  { _id: 'u4', name: 'Priya Sharma', email: 'priya@example.com', role: 'user', status: 'active' },
+  { id: 'u1', name: 'John Doe', email: 'john@example.com', role: 'user', status: 'active' },
+  { id: 'u2', name: 'Admin User', email: 'admin@rentease.com', role: 'admin', status: 'active' },
+  { id: 'u3', name: 'Alice Johnson', email: 'alice@example.com', role: 'user', status: 'suspended' },
+  { id: 'u4', name: 'Priya Sharma', email: 'priya@example.com', role: 'user', status: 'active' },
 ];
 
 const MOCK_CARS = [
-  { _id: 'c1', make: 'Tesla', model: 'Model 3', category: 'Electric', rate: '₹4,500/day', status: 'available' },
-  { _id: 'c2', make: 'BMW', model: 'X5', category: 'SUV', rate: '₹8,500/day', status: 'maintenance' },
-  { _id: 'c3', make: 'Audi', model: 'A4', category: 'Sedan', rate: '₹5,200/day', status: 'rented' },
-  { _id: 'c4', make: 'Mercedes', model: 'C-Class', category: 'Luxury', rate: '₹9,200/day', status: 'available' },
+  { id: 'c1', make: 'Tesla', model: 'Model 3', category: 'Electric', rate: '₹4,500/day', status: 'available' },
+  { id: 'c2', make: 'BMW', model: 'X5', category: 'SUV', rate: '₹8,500/day', status: 'maintenance' },
+  { id: 'c3', make: 'Audi', model: 'A4', category: 'Sedan', rate: '₹5,200/day', status: 'rented' },
+  { id: 'c4', make: 'Mercedes', model: 'C-Class', category: 'Luxury', rate: '₹9,200/day', status: 'available' },
 ];
 
 // ── Tabs config ──────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
               data={MOCK_BOOKINGS}
               searchKey="user"
               columns={[
-                { key: '_id', header: 'Booking ID', render: (v) => <span className="text-slate-400 font-mono text-xs">#{String(v)}</span> },
+                { key: 'id', header: 'Booking ID', render: (v) => <span className="text-slate-400 font-mono text-xs">#{String(v)}</span> },
                 { key: 'user', header: 'Customer' },
                 { key: 'car', header: 'Vehicle' },
                 { key: 'date', header: 'Date' },
@@ -245,7 +245,7 @@ export default function AdminDashboardPage() {
               data={MOCK_CARS}
               searchKey="model"
               columns={[
-                { key: '_id', header: 'ID', render: (v) => <span className="text-slate-400 font-mono text-xs">#{String(v)}</span> },
+                { key: 'id', header: 'ID', render: (v) => <span className="text-slate-400 font-mono text-xs">#{String(v)}</span> },
                 { key: 'make', header: 'Make' },
                 { key: 'model', header: 'Model' },
                 { key: 'category', header: 'Category' },
@@ -262,7 +262,7 @@ export default function AdminDashboardPage() {
               data={MOCK_USERS}
               searchKey="email"
               columns={[
-                { key: '_id', header: 'ID', render: (v) => <span className="text-slate-400 font-mono text-xs">#{String(v)}</span> },
+                { key: 'id', header: 'ID', render: (v) => <span className="text-slate-400 font-mono text-xs">#{String(v)}</span> },
                 { key: 'name', header: 'Name' },
                 { key: 'email', header: 'Email' },
                 { key: 'role', header: 'Role', render: (v) => <StatusBadge value={String(v)} /> },

@@ -70,7 +70,7 @@ app.use(cookieParser());
 app.use(morgan(env.nodeEnv === 'development' ? 'dev' : 'combined'));
 
 // ─── Data Sanitization ────────────────────────────────────────────────────────
-// Manual NoSQL injection prevention (express-mongo-sanitize not compatible with Express 5)
+// Strip keys starting with '$' to prevent injection-style abuse
 app.use((req, _res, next) => {
   const sanitize = (obj: unknown): unknown => {
     if (typeof obj !== 'object' || obj === null) return obj;

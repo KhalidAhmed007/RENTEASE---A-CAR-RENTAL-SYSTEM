@@ -1,0 +1,211 @@
+// ─── Prisma Schema ────────────────────────────────────────────────────────────
+// PostgreSQL + UUID primary keys
+// Replaces all Mongoose models for the RentEase Car Rental System
+// ──────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+  // Explicitly point the Prisma CLI to the correct .env file.
+  // Without prisma.config.ts the CLI auto-loads .env from the schema's directory.
+  // This is the canonical Prisma 6 way to ensure DATABASE_URL is always found.
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  user
+  admin
+}
+
+enum LicenseStatus {
+  pending
+  verified
+  rejected
+}
+
+enum UserStatus {
+  active
+  suspended
+}
+
+enum CarCategory {
+  sedan
+  suv
+  luxury
+  electric
+}
+
+enum CarStatus {
+  available
+  rented
+  maintenance
+  retired
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  active
+  completed
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum PaymentRecordStatus {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+enum PaymentProvider {
+  razorpay
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id             String        @id @default(uuid())
+  firstName      String        @db.VarChar(50)
+  lastName       String        @db.VarChar(50)
+  email          String        @unique
+  passwordHash   String
+  role           Role          @default(user)
+  phoneNumber    String        @unique
+  licenseNumber  String        @unique
+  licenseStatus  LicenseStatus @default(pending)
+  status         UserStatus    @default(active)
+  lastLogin      DateTime?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  bookings       Booking[]
+  payments       Payment[]
+  reviews        Review[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Car {
+  id                 String      @id @default(uuid())
+  make               String
+  carModel           String
+  year               Int
+  registrationNumber String      @unique
+  category           CarCategory
+  dailyRate          Decimal     @db.Decimal(10, 2)
+  status             CarStatus   @default(available)
+
+  // Location stored as flat fields (replaces MongoDB GeoJSON)
+  locationLat        Float?
+  locationLng        Float?
+  locationAddress    String
+
+  features           String[]    // PostgreSQL native array
+  images             String[]    // PostgreSQL native array
+
+  averageRating      Float       @default(0)
+  reviewCount        Int         @default(0)
+
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Relations
+  bookings           Booking[]
+  reviews            Review[]
+
+  @@index([make])
+  @@index([category])
+  @@index([category, dailyRate])
+  @@map("cars")
+}
+
+model Booking {
+  id                  String        @id @default(uuid())
+  userId              String
+  carId               String
+  startDate           DateTime
+  endDate             DateTime
+  totalDays           Int
+  dailyRateAtBooking  Decimal       @db.Decimal(10, 2)
+  totalAmount         Decimal       @db.Decimal(10, 2)
+  status              BookingStatus @default(pending)
+  paymentStatus       PaymentStatus @default(pending)
+  cancellationReason  String?
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  // Relations
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  car                 Car           @relation(fields: [carId], references: [id], onDelete: Restrict)
+  payment             Payment?
+  review              Review?
+
+  @@index([userId])
+  @@index([carId])
+  @@index([carId, startDate, endDate])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("bookings")
+}
+
+model Payment {
+  id                  String              @id @default(uuid())
+  bookingId           String              @unique
+  userId              String
+  razorpayOrderId     String?             @unique
+  razorpayPaymentId   String?             @unique
+  razorpaySignature   String?
+  paymentProvider     PaymentProvider     @default(razorpay)
+  amount              Decimal             @db.Decimal(10, 2)
+  currency            String              @default("INR")
+  status              PaymentRecordStatus @default(pending)
+  paymentMethod       String?
+  paidAt              DateTime?
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  // Relations
+  booking             Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("payments")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  carId     String
+  userId    String
+  bookingId String   @unique
+  rating    Int
+  comment   String?  @db.VarChar(1000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([carId])
+  @@index([carId, createdAt(sort: Desc)])
+  @@map("reviews")
+}

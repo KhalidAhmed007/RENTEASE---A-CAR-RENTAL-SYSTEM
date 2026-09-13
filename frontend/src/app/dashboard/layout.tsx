@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar';
@@ -11,11 +12,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { isAuthenticated, _hasHydrated } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const redirecting = useRef(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (_hasHydrated && !isAuthenticated && !redirecting.current) {
       redirecting.current = true;
-      window.location.replace('/login');
+      router.replace('/login');
     }
   }, [_hasHydrated, isAuthenticated]);
 

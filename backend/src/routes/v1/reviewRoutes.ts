@@ -7,8 +7,8 @@ import { validate } from '../../validators/authValidators';
 const router = Router();
 
 const reviewValidation = [
-  body('carId').isMongoId().withMessage('Invalid car ID'),
-  body('bookingId').isMongoId().withMessage('Invalid booking ID'),
+  body('carId').isUUID().withMessage('Invalid car ID'),
+  body('bookingId').isUUID().withMessage('Invalid booking ID'),
   body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
   body('comment').optional().isString().trim().isLength({ max: 1000 }).withMessage('Comment cannot exceed 1000 characters'),
   validate,
