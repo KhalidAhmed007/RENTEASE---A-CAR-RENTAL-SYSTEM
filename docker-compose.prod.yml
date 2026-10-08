@@ -1,0 +1,19 @@
+services:
+
+  backend:
+    image: ghcr.io/khalidahmed007/rentease-backend:latest
+    container_name: rentease-backend
+    env_file:
+      - ./backend/.env.docker
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/khalidahmed007/rentease-frontend:latest
+    container_name: rentease-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
