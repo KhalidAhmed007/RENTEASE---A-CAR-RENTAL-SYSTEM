@@ -27,5 +27,5 @@ RUN npm run build
 # Expose port (must match PORT in env)
 EXPOSE 5000
 
-# Start command — run migrations then start server
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+
+CMD ["sh", "./docker-entrypoint.sh"]

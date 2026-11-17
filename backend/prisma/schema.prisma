@@ -9,10 +9,10 @@ generator client {
   // Without prisma.config.ts the CLI auto-loads .env from the schema's directory.
   // This is the canonical Prisma 6 way to ensure DATABASE_URL is always found.
 }
-
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Enums ────────────────────────────────────────────────────────────────────

@@ -1,43 +1,47 @@
+
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import dotenv from 'dotenv';
 
-// Load .env before anything else so DATABASE_URL is available.
 dotenv.config();
 
-// Singleton Prisma Client — reuse across the app to avoid connection pool exhaustion.
-// In development, attach to globalThis to survive hot-reloads (ts-node-dev).
 declare global {
-  // eslint-disable-next-line no-var
   var __prisma: PrismaClient | undefined;
 }
 
 function createPrismaClient(): PrismaClient {
-  if (!process.env.DATABASE_URL) {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
     throw new Error('DATABASE_URL environment variable is not set');
   }
 
+  // Preserve Neon SSL parameters and add Prisma connection-pool settings.
+  const url = new URL(databaseUrl);
+
+  url.searchParams.set('connection_limit', '5');
+  url.searchParams.set('connect_timeout', '10');
+  url.searchParams.set('pool_timeout', '10');
+
   const client = new PrismaClient({
     log: [
-      { level: 'warn',  emit: 'event' },
+      { level: 'warn', emit: 'event' },
       { level: 'error', emit: 'event' },
     ],
     datasources: {
       db: {
-        // Append pool tuning & keepalive to prevent Windows WSAECONNRESET (10054).
-        // - connection_limit: max simultaneous connections in the pool.
-        // - connect_timeout: fail fast instead of hanging 30s.
-        // - socket_timeout:  drop stale connections before PG kills them server-side.
-        url: process.env.DATABASE_URL
-          .replace(/\?.*$/, '') // strip any existing params first
-          + '?connection_limit=5&connect_timeout=10&socket_timeout=15&pool_timeout=10',
+        url: url.toString(),
       },
     },
   });
 
-  // Forward Prisma log events to our Winston logger
-  client.$on('warn' as never,  (e: any) => logger.warn(`[Prisma]  ${e.message}`));
-  client.$on('error' as never, (e: any) => logger.error(`[Prisma]  ${e.message}`));
+  client.$on('warn' as never, (e: any) =>
+    logger.warn(`[Prisma] ${e.message}`)
+  );
+
+  client.$on('error' as never, (e: any) =>
+    logger.error(`[Prisma] ${e.message}`)
+  );
 
   return client;
 }
@@ -50,4 +54,3 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export default prisma;
-
