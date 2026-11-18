@@ -4,21 +4,69 @@ import { notFound } from 'next/navigation';
 import { MapPin, Star, ArrowLeft, Shield, ChevronRight, Settings, Fuel, Users, Gauge, Wind, Briefcase, CheckCircle2 } from 'lucide-react';
 import { Car } from '@/types';
 
-// Server Component fetch URL:
-// Uses BACKEND_URL (same var as next.config.ts rewrite) so Vercel server-side
-// fetches hit the real Render backend, not localhost.
+// Server-side fetch URL for the car detail page.
+// BACKEND_URL is passed as a Docker build-arg and baked in at image build time.
+// In Docker Compose the value is http://backend:5000, which resolves inside the
+// shared Docker network — matching the Next.js rewrite in next.config.ts.
 const BASE_URL = (process.env.BACKEND_URL?.trim() || 'http://localhost:5000') + '/api/v1';
 const PLACEHOLDER = '/images/cars/placeholder-car.jpg';
 
+/**
+ * Prisma serializes Decimal fields as strings in JSON (e.g. "65.00").
+ * Coerce dailyRate to number to match the Car interface and ensure
+ * toLocaleString() formats correctly on both listing and detail pages.
+ */
+function normalizeCar(car: Car): Car {
+  return { ...car, dailyRate: Number(car.dailyRate) };
+}
+
 async function getCar(id: string): Promise<Car | null> {
+  // ── 1. Network layer ────────────────────────────────────────────────────────
+  // Only network/DNS/timeout errors are caught here; they are rethrown so the
+  // Next.js error boundary fires instead of silently showing "Car Not Found".
+  let res: Response;
   try {
-    const res = await fetch(`${BASE_URL}/cars/${id}`, { next: { revalidate: 60 } });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.data;
-  } catch {
+    res = await fetch(`${BASE_URL}/cars/${id}`, { next: { revalidate: 60 } });
+  } catch (err) {
+    console.error(`[getCar] Network error fetching car ${id}:`, err);
+    throw err; // → Next.js error boundary (not cached by fetch cache)
+  }
+
+  // ── 2. HTTP status layer ────────────────────────────────────────────────────
+  if (res.status === 404) {
+    // Genuine missing car — only this path results in notFound().
     return null;
   }
+
+  if (!res.ok) {
+    // Backend 5xx or unexpected status — log and throw.
+    // Thrown errors are never stored in Next.js's fetch cache, so a backend
+    // blip cannot lock the page into "Car Not Found" for 60 seconds.
+    const body = await res.text().catch(() => '');
+    console.error(`[getCar] Backend returned HTTP ${res.status} for car ${id}. Body: ${body}`);
+    throw new Error(`Failed to fetch car (HTTP ${res.status})`);
+  }
+
+  // ── 3. JSON parse layer ─────────────────────────────────────────────────────
+  let json: { data: Car };
+  try {
+    json = await res.json();
+  } catch (err) {
+    console.error(`[getCar] JSON parse error for car ${id}:`, err);
+    throw err; // → Next.js error boundary
+  }
+
+  // ── 4. Response shape validation ────────────────────────────────────────────
+  // Guard against an API response where `data` is missing or not an object
+  // (e.g. { success: true, data: null } or an unexpected shape).
+  if (!json.data || typeof json.data !== 'object') {
+    console.error(`[getCar] Malformed API response for car ${id}: 'data' is`, json.data);
+    throw new Error(`Malformed API response for car ${id}`);
+  }
+
+  // ── 5. Normalize ─────────────────────────────────────────────────────────────
+  // Prisma Decimal → string coercion fix (matches carApi.normalizeCar on listing page).
+  return normalizeCar(json.data);
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
